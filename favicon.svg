@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#f97316"/>
+  <!-- House roof -->
+  <polygon points="32,8 8,30 14,30 14,54 50,54 50,30 56,30" fill="white"/>
+  <!-- Door -->
+  <rect x="26" y="38" width="12" height="16" rx="2" fill="#f97316"/>
+  <!-- Door knob -->
+  <circle cx="35" cy="47" r="1.5" fill="white"/>
+</svg>
