@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service | HomeService Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="https://browser.sentry-cdn.com/8.38.0/bundle.min.js" crossorigin="anonymous"></script>
+  <script>
+    if (typeof Sentry !== "undefined") {
+      Sentry.init({
+        dsn: "https://abc31a508baff7743d6dad9a6b7d2bbc@o4511434068590592.ingest.us.sentry.io/4511434125082624",
+        environment: "production",
+        release: "homeservice-hub@1.0.0",
+        tracesSampleRate: 0.2,
+        beforeSend: function(event) {
+          // Drop noise from browser extensions
+          if (event.exception) {
+            var values = (event.exception.values || []);
+            if (values.length && values[0].stacktrace) {
+              var frames = values[0].stacktrace.frames || [];
+              var top = frames[frames.length - 1];
+              if (top && top.filename && top.filename.indexOf("extension") !== -1) return null;
+            }
+          }
+          return event;
+        }
+      });
+    }
+  </script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 min-h-screen">
+
+  <!-- Header -->
+  <header class="border-b border-slate-700/50">
+    <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="intake.html" class="inline-flex items-center gap-3">
+        <div class="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <span class="font-bold text-lg text-white">HomeService<span class="text-orange-500">Hub</span></span>
+      </a>
+      <a href="intake.html" class="text-slate-400 hover:text-white text-sm transition">← Back to Home</a>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="max-w-4xl mx-auto px-6 py-12">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 md:p-12">
+
+      <h1 class="text-3xl font-bold text-slate-900 mb-2">Terms of Service</h1>
+      <p class="text-slate-500 text-sm mb-8">Last updated: May 22, 2026</p>
+
+      <div class="prose prose-slate max-w-none space-y-8 text-slate-700">
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">1. Acceptance of Terms</h2>
+          <p>By accessing or using HomeService Hub ("the Service," "we," "us," or "our"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the Service. These terms apply to all users, including home service professionals ("Pros") and homeowners ("Customers").</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">2. Description of Service</h2>
+          <p>HomeService Hub is a lead marketplace and business management platform connecting home service professionals with homeowners seeking services. The Service includes:</p>
+          <ul class="list-disc pl-6 mt-2 space-y-1">
+            <li>A lead marketplace where Pros can purchase verified service leads</li>
+            <li>A CRM and scheduling dashboard for Pros to manage their business</li>
+            <li>A booking interface for Customers to request services</li>
+            <li>Communication and notification tools</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">3. Account Registration</h2>
+          <p>To access certain features, you must create an account. You agree to:</p>
+          <ul class="list-disc pl-6 mt-2 space-y-1">
+            <li>Provide accurate, current, and complete information during registration</li>
+            <li>Maintain the security of your password and account</li>
+            <li>Notify us immediately of any unauthorized use of your account</li>
+            <li>Accept responsibility for all activity that occurs under your account</li>
+          </ul>
+          <p class="mt-3">Pro accounts require approval by HomeService Hub administrators. We reserve the right to deny or revoke access at our discretion.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">4. Lead Purchases and Payments</h2>
+          <p>Pros may purchase leads through the marketplace subject to the following:</p>
+          <ul class="list-disc pl-6 mt-2 space-y-1">
+            <li>All lead purchases are final. We do not offer refunds on purchased leads.</li>
+            <li>Lead availability is not guaranteed. Leads may be removed at any time.</li>
+            <li>Lead budgets are enforced in real time. Purchases that would exceed your set budget will be declined.</li>
+            <li>Prices are set by HomeService Hub and are subject to change with notice.</li>
+            <li>Payment processing is handled by Stripe. By making a purchase, you also agree to <a href="https://stripe.com/legal" class="text-orange-600 hover:text-orange-700" target="_blank" rel="noopener">Stripe's Terms of Service</a>.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">5. Prohibited Conduct</h2>
+          <p>You agree not to:</p>
+          <ul class="list-disc pl-6 mt-2 space-y-1">
+            <li>Use the Service for any unlawful purpose or in violation of any regulations</li>
+            <li>Submit false, misleading, or fraudulent information</li>
+            <li>Harass, abuse, or harm any other user</li>
+            <li>Attempt to gain unauthorized access to any part of the Service</li>
+            <li>Scrape, crawl, or use automated means to access the Service without permission</li>
+            <li>Resell or redistribute leads purchased through the marketplace</li>
+            <li>Impersonate any person or entity</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">6. Customer Submissions</h2>
+          <p>When Customers submit service requests ("leads"), they represent that the information provided is accurate and that they are genuinely seeking the described services. Spam or fraudulent submissions are prohibited.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">7. Intellectual Property</h2>
+          <p>All content, features, and functionality of the Service — including but not limited to text, graphics, logos, and software — are owned by HomeService Hub and are protected by applicable intellectual property laws. You may not reproduce, distribute, or create derivative works without our express written permission.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">8. Disclaimers</h2>
+          <p>The Service is provided "as is" and "as available" without warranties of any kind, either express or implied. HomeService Hub does not:</p>
+          <ul class="list-disc pl-6 mt-2 space-y-1">
+            <li>Guarantee the accuracy or quality of leads</li>
+            <li>Verify the credentials, licensing, or insurance of Pros</li>
+            <li>Guarantee any particular results from use of the Service</li>
+            <li>Warrant that the Service will be uninterrupted or error-free</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">9. Limitation of Liability</h2>
+          <p>To the fullest extent permitted by law, HomeService Hub shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Service. Our total liability for any claim shall not exceed the amount you paid us in the twelve months preceding the claim.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">10. Indemnification</h2>
+          <p>You agree to indemnify and hold HomeService Hub harmless from any claims, damages, or expenses (including reasonable attorneys' fees) arising from your use of the Service, your violation of these Terms, or your violation of any rights of a third party.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">11. Termination</h2>
+          <p>We may suspend or terminate your account at any time for any reason, including violation of these Terms. Upon termination, your right to use the Service ceases immediately. Provisions that by their nature should survive termination will remain in effect.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">12. Changes to Terms</h2>
+          <p>We reserve the right to modify these Terms at any time. We will notify registered users of material changes via email or in-app notice. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">13. Governing Law</h2>
+          <p>These Terms are governed by the laws of the United States. Any disputes shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association, except that either party may seek injunctive relief in a court of competent jurisdiction.</p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-slate-800 mb-3">14. Contact</h2>
+          <p>For questions about these Terms, contact us at:</p>
+          <p class="mt-2 font-medium text-slate-800">HomeService Hub<br>
+          <a href="mailto:support@homeservicehub.com" class="text-orange-600 hover:text-orange-700">support@homeservicehub.com</a></p>
+        </section>
+
+      </div>
+
+      <div class="mt-10 pt-8 border-t border-slate-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <a href="privacy.html" class="text-orange-600 hover:text-orange-700 text-sm font-medium">Privacy Policy →</a>
+        <a href="intake.html" class="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg text-sm font-semibold hover:from-orange-600 hover:to-orange-700 transition">Back to Home</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center text-slate-500 text-xs py-8">
+    &copy; 2026 HomeService Hub. All rights reserved.
+  </footer>
+</body>
+</html>

@@ -72,6 +72,29 @@
     @keyframes popIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="https://browser.sentry-cdn.com/8.38.0/bundle.min.js" crossorigin="anonymous"></script>
+  <script>
+    if (typeof Sentry !== "undefined") {
+      Sentry.init({
+        dsn: "https://abc31a508baff7743d6dad9a6b7d2bbc@o4511434068590592.ingest.us.sentry.io/4511434125082624",
+        environment: "production",
+        release: "homeservice-hub@1.0.0",
+        tracesSampleRate: 0.2,
+        beforeSend: function(event) {
+          // Drop noise from browser extensions
+          if (event.exception) {
+            var values = (event.exception.values || []);
+            if (values.length && values[0].stacktrace) {
+              var frames = values[0].stacktrace.frames || [];
+              var top = frames[frames.length - 1];
+              if (top && top.filename && top.filename.indexOf("extension") !== -1) return null;
+            }
+          }
+          return event;
+        }
+      });
+    }
+  </script>
 </head>
 <body>
 
@@ -345,8 +368,18 @@
           <div><label class="block text-sm font-semibold text-gray-700 mb-2">Your Name</label><input type="text" id="inputName" class="form-input" placeholder="John Smith"></div>
           <div><label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label><input type="tel" id="inputPhone" class="form-input" placeholder="(555) 555-5555"></div>
           <div><label class="block text-sm font-semibold text-gray-700 mb-2">Email</label><input type="email" id="inputEmail" class="form-input" placeholder="john@abcjunk.com"></div>
+          <!-- Honeypot: hidden from real users, bots fill this -->
+          <div style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden" aria-hidden="true">
+            <input type="text" id="hp_website" tabindex="-1" autocomplete="off" placeholder="Website">
+          </div>
         </div>
-        <button onclick="submitApplication()" class="btn-primary w-full mt-6" id="submitBtn"><i data-lucide="check-circle" class="w-5 h-5"></i> Submit Application</button>
+        <p class="text-center text-gray-500 text-xs mt-6">
+          By submitting you agree to our
+          <a href="terms.html" class="text-orange-600 hover:text-orange-700" target="_blank">Terms of Service</a>
+          and
+          <a href="privacy.html" class="text-orange-600 hover:text-orange-700" target="_blank">Privacy Policy</a>.
+        </p>
+        <button onclick="submitApplication()" class="btn-primary w-full mt-3" id="submitBtn"><i data-lucide="check-circle" class="w-5 h-5"></i> Submit Application</button>
         <p class="text-center text-gray-400 text-sm mt-4"><i data-lucide="lock" class="w-4 h-4 inline"></i> Your info is secure</p>
       </div>
       
@@ -434,6 +467,17 @@
     }
     
     function submitApplication() {
+      // Honeypot check
+      if (document.getElementById('hp_website').value) return;
+
+      // Rate limit — one application per 5 minutes per browser
+      var lastSubmit = parseInt(localStorage.getItem('rl_application') || '0');
+      var now = Date.now();
+      if (now - lastSubmit < 300000) {
+        alert('Please wait a few minutes before submitting again.');
+        return;
+      }
+
       var business = document.getElementById('inputBusiness').value.trim();
       var name = document.getElementById('inputName').value.trim();
       var phone = document.getElementById('inputPhone').value.trim();
@@ -467,6 +511,7 @@
           btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Submit Application';
           lucide.createIcons();
         } else {
+          localStorage.setItem('rl_application', Date.now().toString());
           // Notify admin of new application
           fetch('https://amggehmbxidqxzjimmzz.supabase.co/functions/v1/send-email', {
             method: 'POST',

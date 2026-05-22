@@ -211,6 +211,29 @@
     .summary-value { font-weight: 600; color: #1c1917; }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="https://browser.sentry-cdn.com/8.38.0/bundle.min.js" crossorigin="anonymous"></script>
+  <script>
+    if (typeof Sentry !== "undefined") {
+      Sentry.init({
+        dsn: "https://abc31a508baff7743d6dad9a6b7d2bbc@o4511434068590592.ingest.us.sentry.io/4511434125082624",
+        environment: "production",
+        release: "homeservice-hub@1.0.0",
+        tracesSampleRate: 0.2,
+        beforeSend: function(event) {
+          // Drop noise from browser extensions
+          if (event.exception) {
+            var values = (event.exception.values || []);
+            if (values.length && values[0].stacktrace) {
+              var frames = values[0].stacktrace.frames || [];
+              var top = frames[frames.length - 1];
+              if (top && top.filename && top.filename.indexOf("extension") !== -1) return null;
+            }
+          }
+          return event;
+        }
+      });
+    }
+  </script>
 </head>
 <body>
   <div class="booking-card">
@@ -404,6 +427,11 @@
           </div>
         </div>
         
+        <!-- Honeypot: hidden from real users, bots fill this -->
+        <div style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden" aria-hidden="true">
+          <input type="text" id="hp_website" tabindex="-1" autocomplete="off" placeholder="Website">
+        </div>
+
         <div class="flex gap-3">
           <button onclick="prevStep()" class="btn btn-outline flex-1">
             <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
@@ -577,6 +605,17 @@
     
     // ========== SUBMIT ==========
     async function submitBooking() {
+      // Honeypot check
+      if (document.getElementById('hp_website').value) return;
+
+      // Rate limit — one booking per 60 seconds per browser
+      var lastSubmit = parseInt(localStorage.getItem('rl_booking') || '0');
+      var now = Date.now();
+      if (now - lastSubmit < 60000) {
+        alert('Please wait a moment before submitting again.');
+        return;
+      }
+
       const btn = document.getElementById('submitBtn');
       btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Submitting...';
       btn.disabled = true;
@@ -603,7 +642,9 @@
           .select();
         
         if (error) throw error;
-        
+
+        localStorage.setItem('rl_booking', Date.now().toString());
+
         // Show success
         document.getElementById('confirmDate').textContent = new Date(booking.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         document.getElementById('confirmTime').textContent = booking.time;

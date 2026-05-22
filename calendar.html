@@ -132,6 +132,29 @@
     .type-estimate { background: #e9d5ff; color: #7c3aed; }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="https://browser.sentry-cdn.com/8.38.0/bundle.min.js" crossorigin="anonymous"></script>
+  <script>
+    if (typeof Sentry !== "undefined") {
+      Sentry.init({
+        dsn: "https://abc31a508baff7743d6dad9a6b7d2bbc@o4511434068590592.ingest.us.sentry.io/4511434125082624",
+        environment: "production",
+        release: "homeservice-hub@1.0.0",
+        tracesSampleRate: 0.2,
+        beforeSend: function(event) {
+          // Drop noise from browser extensions
+          if (event.exception) {
+            var values = (event.exception.values || []);
+            if (values.length && values[0].stacktrace) {
+              var frames = values[0].stacktrace.frames || [];
+              var top = frames[frames.length - 1];
+              if (top && top.filename && top.filename.indexOf("extension") !== -1) return null;
+            }
+          }
+          return event;
+        }
+      });
+    }
+  </script>
 </head>
 <body>
   <!-- Header -->

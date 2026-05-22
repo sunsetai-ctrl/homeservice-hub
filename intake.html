@@ -234,6 +234,29 @@
     }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="https://browser.sentry-cdn.com/8.38.0/bundle.min.js" crossorigin="anonymous"></script>
+  <script>
+    if (typeof Sentry !== "undefined") {
+      Sentry.init({
+        dsn: "https://abc31a508baff7743d6dad9a6b7d2bbc@o4511434068590592.ingest.us.sentry.io/4511434125082624",
+        environment: "production",
+        release: "homeservice-hub@1.0.0",
+        tracesSampleRate: 0.2,
+        beforeSend: function(event) {
+          // Drop noise from browser extensions
+          if (event.exception) {
+            var values = (event.exception.values || []);
+            if (values.length && values[0].stacktrace) {
+              var frames = values[0].stacktrace.frames || [];
+              var top = frames[frames.length - 1];
+              if (top && top.filename && top.filename.indexOf("extension") !== -1) return null;
+            }
+          }
+          return event;
+        }
+      });
+    }
+  </script>
 </head>
 <body>
 
@@ -577,8 +600,12 @@
             <label class="block text-sm font-semibold text-gray-700 mb-2">Email (optional)</label>
             <input type="email" id="inputEmail" class="form-input" placeholder="john@email.com">
           </div>
+          <!-- Honeypot: hidden from real users, bots fill this -->
+          <div style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden" aria-hidden="true">
+            <input type="text" id="hp_website" tabindex="-1" autocomplete="off" placeholder="Website">
+          </div>
         </div>
-        
+
         <button onclick="submitQuiz()" class="btn-primary w-full mt-6" id="submitBtn">
           <i data-lucide="check-circle" class="w-5 h-5"></i> Get My Free Quotes
         </button>
@@ -775,10 +802,21 @@
     
     // Submit quiz
     async function submitQuiz() {
+      // Honeypot check — bots fill hidden fields, humans don't
+      if (document.getElementById('hp_website').value) return;
+
+      // Rate limit — one submission per 60 seconds per browser
+      var lastSubmit = parseInt(localStorage.getItem('rl_lead') || '0');
+      var now = Date.now();
+      if (now - lastSubmit < 60000) {
+        alert('Please wait a moment before submitting again.');
+        return;
+      }
+
       var name = document.getElementById('inputName').value.trim();
       var phone = document.getElementById('inputPhone').value.trim();
       var email = document.getElementById('inputEmail').value.trim();
-      
+
       if (!name || !phone) {
         alert('Please enter name and phone');
         return;
@@ -834,7 +872,8 @@
           .select();
         
         if (result.error) throw result.error;
-        
+
+        localStorage.setItem('rl_lead', Date.now().toString());
         document.getElementById('refId').textContent = result.data[0].id.slice(0, 8).toUpperCase();
         currentStep = 6;
         showStep(6);
@@ -856,6 +895,18 @@
     }
   </script>
   
+  <!-- Footer -->
+  <footer class="bg-slate-900 border-t border-slate-800 py-8 mt-16">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-slate-500 text-sm">&copy; 2026 HomeService Hub. All rights reserved.</p>
+      <div class="flex gap-6 text-sm">
+        <a href="terms.html" class="text-slate-400 hover:text-white transition">Terms of Service</a>
+        <a href="privacy.html" class="text-slate-400 hover:text-white transition">Privacy Policy</a>
+        <a href="mailto:support@homeservicehub.com" class="text-slate-400 hover:text-white transition">Contact</a>
+      </div>
+    </div>
+  </footer>
+
   <!-- AI Chatbot Widget -->
   <script src="chatbot.js"></script>
 </body>
