@@ -354,6 +354,23 @@
     document.addEventListener('DOMContentLoaded', async () => {
       lucide.createIcons();
       
+      // Check for demo mode first
+      const demoMode = localStorage.getItem('demoMode');
+      if (demoMode) {
+        companyId = '11111111-1111-1111-1111-111111111111';
+        localStorage.setItem('proCompanyId', companyId);
+        document.getElementById('companyName').textContent = 'Demo Company';
+        showDemoBanner();
+        await loadCompanyInfo();
+        await loadDashboardData();
+        await loadLeads();
+        await loadPipeline();
+        await loadMarketplace();
+        await renderCalendar();
+        initCharts();
+        return;
+      }
+
       // Check authentication
       const { data: { session } } = await supabaseClient.auth.getSession();
       
@@ -395,6 +412,16 @@
     });
     
     // Logout function
+    function showDemoBanner() {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#f59e0b;color:#000;text-align:center;padding:8px;font-weight:700;font-size:13px;letter-spacing:0.05em;';
+      banner.textContent = '⚠️ DEMO MODE — View only. No purchases or changes will be saved.';
+      document.body.prepend(banner);
+      document.body.style.paddingTop = '36px';
+    }
+
+    function isDemoMode() { return !!localStorage.getItem('demoMode'); }
+
     async function logout() {
       localStorage.removeItem('demoMode');
       localStorage.removeItem('proCompanyId');

@@ -935,6 +935,21 @@
         return;
       }
       
+      // No real session — check for demo mode
+      const demoMode = localStorage.getItem('demoMode');
+      if (demoMode === 'admin') {
+        isDemoMode = true;
+        showDemoBanner();
+        await loadDashboardData();
+        await loadApplications();
+        await loadPros();
+        await loadLeads();
+        await loadBookings();
+        initCharts();
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+        return;
+      }
+
       // No session - redirect to login
       window.location.href = 'login.html';
     });

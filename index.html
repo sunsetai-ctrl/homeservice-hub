@@ -300,6 +300,11 @@
     function closeModal() { document.getElementById('buyModal').classList.add('hidden'); }
 
     async function buyLead(id) {
+      if (localStorage.getItem('demoMode')) {
+        alert('⚠️ Demo mode — purchases are disabled. Log in with a real account to buy leads.');
+        closeModal();
+        return;
+      }
       try {
         const companyId = localStorage.getItem('proCompanyId');
         if (!companyId) { window.location.href = 'login.html'; return; }
