@@ -1,0 +1,2517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | HomeService Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; min-height: 100vh; }
+    h1, h2, h3, .font-display { font-family: 'Nunito', sans-serif; }
+    
+    /* Sidebar styles */
+    .sidebar { 
+      width: 260px; 
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); 
+      min-height: 100vh; 
+      position: fixed; 
+      left: 0; 
+      top: 0; 
+      transition: transform 0.3s ease;
+      z-index: 50;
+    }
+    .sidebar.collapsed { transform: translateX(-252px); }
+    .sidebar-toggle {
+      position: fixed;
+      left: 260px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 48px;
+      background: #1e293b;
+      border: none;
+      border-radius: 0 8px 8px 0;
+      cursor: pointer;
+      z-index: 51;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: left 0.3s ease;
+    }
+    .sidebar-toggle.collapsed { left: 8px; }
+    .sidebar-toggle svg { color: white; transition: transform 0.3s ease; }
+    .sidebar-toggle.collapsed svg { transform: rotate(180deg); }
+    
+    .main-content { 
+      margin-left: 260px; 
+      padding: 24px; 
+      transition: margin-left 0.3s ease;
+    }
+    .main-content.expanded { margin-left: 16px; }
+    
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-weight: 500; cursor: pointer; transition: all 0.2s; border-radius: 8px; margin: 4px 12px; text-decoration: none; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+    .nav-item.active { background: #f97316; color: white; }
+    .stat-card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .stat-value { font-size: 32px; font-weight: 800; color: #1e293b; }
+    .stat-label { color: #64748b; font-size: 14px; font-weight: 500; }
+    .stat-change { font-size: 13px; font-weight: 600; }
+    .stat-change.up { color: #22c55e; }
+    .stat-change.down { color: #ef4444; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .table-row { display: grid; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; align-items: center; }
+    .table-row:hover { background: #f8fafc; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #d97706; }
+    .badge-approved { background: #dcfce7; color: #16a34a; }
+    .badge-rejected { background: #fee2e2; color: #dc2626; }
+    .btn { padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; border: none; }
+    .btn-primary { background: #f97316; color: white; }
+    .btn-primary:hover { background: #ea580c; }
+    .btn-success { background: #22c55e; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-outline { background: white; border: 1px solid #e2e8f0; color: #64748b; }
+    .tab { padding: 12px 24px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tab.active { color: #f97316; border-bottom-color: #f97316; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .form-input { width: 100%; padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+    .form-input:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+  </style>
+</head>
+<body>
+  <!-- Sidebar Toggle Button -->
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+  </button>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="p-6 border-b border-slate-700">
+      <a href="index.html" class="flex items-center gap-3 text-white hover:opacity-80 transition">
+        <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+          <i data-lucide="home" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="font-display font-bold text-white">HomeService Hub</div>
+          <div class="text-xs text-slate-400">Admin Portal</div>
+        </div>
+      </a>
+    </div>
+    <nav class="py-4">
+      <div class="nav-item active" onclick="showSection('dashboard')"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span>Dashboard</span></div>
+      <div class="nav-item" onclick="showSection('applications')"><i data-lucide="user-plus" class="w-5 h-5"></i><span>Pro Applications</span><span id="appBadge" class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">0</span></div>
+      <div class="nav-item" onclick="showSection('pros')"><i data-lucide="users" class="w-5 h-5"></i><span>Manage Pros</span></div>
+      <div class="nav-item" onclick="showSection('leads')"><i data-lucide="target" class="w-5 h-5"></i><span>Marketplace Leads</span></div>
+      <div class="nav-item" onclick="showSection('bookings')"><i data-lucide="calendar-check" class="w-5 h-5"></i><span>Bookings</span></div>
+      <div class="nav-item" onclick="showSection('chatbot')"><i data-lucide="message-circle" class="w-5 h-5"></i><span>Chatbot FAQs</span></div>
+      <div class="nav-item" onclick="showSection('botTraining')"><i data-lucide="brain" class="w-5 h-5"></i><span>Bot Training</span></div>
+      <a href="monitoring.html" class="nav-item"><i data-lucide="activity" class="w-5 h-5"></i><span>System Monitor</span></a>
+      <div class="nav-item" onclick="showSection('settings')"><i data-lucide="settings" class="w-5 h-5"></i><span>Settings</span></div>
+    </nav>
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
+      <a href="#" onclick="logout()" class="nav-item"><i data-lucide="log-out" class="w-5 h-5"></i><span>Logout</span></a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    
+    <!-- Dashboard Section -->
+    <div id="dashboard" class="section active">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">Dashboard Overview</h1>
+        <div class="text-sm text-slate-500">Last updated: <span id="lastUpdated">--</span></div>
+      </div>
+      
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><i data-lucide="users" class="w-6 h-6 text-blue-600"></i></div>
+            <span class="stat-change up">+12%</span>
+          </div>
+          <div class="stat-value" id="totalPros">0</div>
+          <div class="stat-label">Active Pros</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><i data-lucide="target" class="w-6 h-6 text-green-600"></i></div>
+            <span class="stat-change up">+8%</span>
+          </div>
+          <div class="stat-value" id="totalLeads">0</div>
+          <div class="stat-label">Total Leads</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center"><i data-lucide="dollar-sign" class="w-6 h-6 text-orange-600"></i></div>
+            <span class="stat-change up">+23%</span>
+          </div>
+          <div class="stat-value">$<span id="totalRevenue">0</span></div>
+          <div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center"><i data-lucide="trending-up" class="w-6 h-6 text-emerald-600"></i></div>
+          </div>
+          <div class="stat-value">$<span id="mtdRevenue">0</span></div>
+          <div class="stat-label">MTD Revenue (Paid)</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><i data-lucide="calendar" class="w-6 h-6 text-purple-600"></i></div>
+            <span class="stat-change up">+15%</span>
+          </div>
+          <div class="stat-value" id="totalBookings">0</div>
+          <div class="stat-label">Bookings</div>
+        </div>
+      </div>
+      
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Lead Volume (Last 7 Days)</h3>
+          <canvas id="leadsChart" height="200"></canvas>
+        </div>
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Revenue (Last 7 Days)</h3>
+          <canvas id="revenueChart" height="200"></canvas>
+        </div>
+      </div>
+      
+      <!-- Secondary Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Leads by Tier</h3>
+          <canvas id="tierChart" height="180"></canvas>
+        </div>
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Conversion Rate</h3>
+          <div class="flex items-center justify-center h-44">
+            <div class="text-center">
+              <div class="text-5xl font-black text-green-500" id="conversionRate">0%</div>
+              <div class="text-slate-500 mt-2">Lead to Job</div>
+            </div>
+          </div>
+        </div>
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Pending Applications</h3>
+          <div class="flex items-center justify-center h-44">
+            <div class="text-center">
+              <div class="text-5xl font-black text-orange-500" id="pendingApps">0</div>
+              <div class="text-slate-500 mt-2">Awaiting Review</div>
+              <button onclick="showSection('applications')" class="btn btn-primary mt-4">Review Now</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Applications Section -->
+    <div id="applications" class="section">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">Pro Applications</h1>
+        <div class="flex gap-2">
+          <button class="btn btn-outline" onclick="filterApplications('all')">All</button>
+          <button class="btn btn-outline" onclick="filterApplications('pending')">Pending</button>
+          <button class="btn btn-outline" onclick="filterApplications('approved')">Approved</button>
+          <button class="btn btn-outline" onclick="filterApplications('rejected')">Rejected</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-row font-semibold text-slate-500 text-sm" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 120px;">
+          <div>Business</div><div>Contact</div><div>Location</div><div>Status</div><div>Date</div><div>Actions</div>
+        </div>
+        <div id="applicationsList"></div>
+      </div>
+    </div>
+    
+    <!-- Pros Section -->
+    <div id="pros" class="section">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">Manage Pros</h1>
+        <button class="btn btn-primary" onclick="openAddProModal()"><i data-lucide="plus" class="w-4 h-4 inline mr-1"></i>Add Pro</button>
+      </div>
+      <div class="card">
+        <div class="table-row font-semibold text-slate-500 text-sm" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 100px;">
+          <div>Company</div><div>Contact</div><div>Leads</div><div>Spent</div><div>Status</div><div>Actions</div>
+        </div>
+        <div id="prosList"></div>
+      </div>
+    </div>
+    
+    <!-- Leads Section -->
+    <div id="leads" class="section">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">Marketplace Leads</h1>
+        <div class="flex gap-3">
+          <select id="leadsFilter" class="btn btn-outline" onchange="loadLeads()">
+            <option value="all">All Leads</option>
+            <option value="available">Available</option>
+            <option value="sold">Sold</option>
+          </select>
+          <button class="btn btn-primary" onclick="openAddLeadModal()"><i data-lucide="plus" class="w-4 h-4 inline mr-1"></i>Add Lead</button>
+        </div>
+      </div>
+      <div id="leadsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+    </div>
+    
+    <!-- Bookings Section -->
+    <div id="bookings" class="section">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">Bookings & Demo Requests</h1>
+        <div class="flex gap-2">
+          <button class="btn btn-outline" onclick="filterBookings('all')">All</button>
+          <button class="btn btn-outline" onclick="filterBookings('demo')">Demos</button>
+          <button class="btn btn-outline" onclick="filterBookings('booking')">Bookings</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-row font-semibold text-slate-500 text-sm" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 100px;">
+          <div>Customer</div><div>Type</div><div>Date</div><div>Time</div><div>Status</div><div>Actions</div>
+        </div>
+        <div id="bookingsList"></div>
+      </div>
+    </div>
+    
+    <!-- Chatbot Section -->
+    <div id="chatbot" class="section">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">AI Chatbot</h1>
+        <button class="btn btn-primary" onclick="openModal('addFaqModal')">
+          <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>Add FAQ
+        </button>
+      </div>
+      
+      <!-- Chatbot Tabs -->
+      <div class="card mb-6">
+        <div class="p-4 border-b flex gap-2">
+          <button class="tab active" id="tabFaqs" onclick="showChatbotTab('faqs')">FAQs</button>
+          <button class="tab" id="tabKnowledgeBase" onclick="showChatbotTab('knowledgeBase')">Knowledge Base</button>
+          <button class="tab" id="tabSettings" onclick="showChatbotTab('settings')">AI Settings</button>
+          <button class="tab" id="tabPrompt" onclick="showChatbotTab('prompt')">System Prompt</button>
+        </div>
+      </div>
+      
+      <!-- FAQs Tab -->
+      <div id="chatbotFaqs" class="chatbot-tab">
+        <div class="card">
+          <div class="p-4 border-b flex gap-2 flex-wrap">
+            <button class="tab active" onclick="filterFaqs('all', this)">All</button>
+            <button class="tab" onclick="filterFaqs('Pricing', this)">Pricing</button>
+            <button class="tab" onclick="filterFaqs('Services', this)">Services</button>
+            <button class="tab" onclick="filterFaqs('Process', this)">Process</button>
+            <button class="tab" onclick="filterFaqs('Booking', this)">Booking</button>
+            <button class="tab" onclick="filterFaqs('Eco-Friendly', this)">Eco</button>
+          </div>
+          <div id="faqList"></div>
+        </div>
+      </div>
+      
+      <!-- Knowledge Base Tab (NEW - integrated into Chatbot section) -->
+      <div id="chatbotKnowledgeBase" class="chatbot-tab" style="display:none;">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Upload Panel -->
+          <div class="card p-6">
+            <h3 class="font-display font-bold text-lg mb-4 flex items-center gap-2">
+              <i data-lucide="upload" class="w-5 h-5 text-blue-500"></i>
+              Add Knowledge
+            </h3>
+            <p class="text-sm text-slate-500 mb-4">Add documents, policies, or information the chatbot should know. Changes apply in real-time!</p>
+            
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm font-medium text-slate-700 block mb-2">Title</label>
+                <input type="text" id="kbTitle" class="form-input" placeholder="e.g., Pricing Guide 2024">
+              </div>
+              
+              <div>
+                <label class="text-sm font-medium text-slate-700 block mb-2">Category</label>
+                <select id="kbCategory" class="form-input">
+                  <option value="Pricing">Pricing</option>
+                  <option value="Services">Services</option>
+                  <option value="Policies">Policies</option>
+                  <option value="Training">Training</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="text-sm font-medium text-slate-700 block mb-2">Content</label>
+                <textarea id="kbContent" class="form-input" rows="6" placeholder="Paste document content, pricing info, policies, etc..."></textarea>
+              </div>
+              
+              <div>
+                <label class="text-sm font-medium text-slate-700 block mb-2">Keywords (comma separated)</label>
+                <input type="text" id="kbTags" class="form-input" placeholder="e.g., pricing, rates, costs">
+                <p class="text-xs text-slate-400 mt-1">Keywords help match customer questions to this content</p>
+              </div>
+              
+              <button class="btn btn-primary w-full" onclick="saveKnowledgeFromChatbot()">
+                <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>Add to Knowledge Base
+              </button>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t">
+              <h4 class="font-medium text-slate-700 mb-3 flex items-center gap-2">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                Upload File
+              </h4>
+              <p class="text-xs text-slate-500 mb-3">Upload .txt or .md files to extract content</p>
+              <input type="file" id="kbFileUploadChatbot" accept=".txt,.md" class="form-input text-sm" onchange="handleFileUploadChatbot(event)">
+            </div>
+          </div>
+          
+          <!-- Knowledge Base List -->
+          <div class="lg:col-span-2">
+            <div class="card">
+              <div class="p-4 border-b flex justify-between items-center">
+                <div>
+                  <h3 class="font-semibold">Knowledge Base Documents</h3>
+                  <p class="text-xs text-slate-500">Bot pulls from these in real-time</p>
+                </div>
+                <div class="flex gap-2">
+                  <input type="text" id="kbSearchChatbot" class="form-input text-sm w-48" placeholder="Search..." onkeyup="searchKnowledgeChatbot()">
+                </div>
+              </div>
+              <div id="knowledgeBaseListChatbot" class="divide-y max-h-[500px] overflow-y-auto">
+                <!-- Knowledge base entries -->
+              </div>
+            </div>
+            
+            <!-- Real-time indicator -->
+            <div class="mt-4 p-3 bg-green-50 rounded-lg flex items-center gap-2">
+              <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span class="text-sm text-green-700">Changes sync to chatbot in real-time (within 30 seconds)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- AI Settings Tab -->
+      <div id="chatbotSettings" class="chatbot-tab" style="display:none;">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="card p-6">
+            <h3 class="font-display font-bold text-lg mb-4 flex items-center gap-2">
+              <i data-lucide="building" class="w-5 h-5 text-orange-500"></i>
+              Business Info
+            </h3>
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm text-slate-500 font-medium">Business Name</label>
+                <input type="text" id="cfgBusinessName" class="form-input" placeholder="HomeService Hub">
+              </div>
+              <div>
+                <label class="text-sm text-slate-500 font-medium">Tagline</label>
+                <input type="text" id="cfgTagline" class="form-input" placeholder="Junk Removal Experts">
+              </div>
+              <div>
+                <label class="text-sm text-slate-500 font-medium">Phone Number</label>
+                <input type="text" id="cfgPhone" class="form-input" placeholder="(864) 555-0123">
+              </div>
+              <div>
+                <label class="text-sm text-slate-500 font-medium">Business Hours</label>
+                <input type="text" id="cfgHours" class="form-input" placeholder="Mon-Fri 8am-6pm">
+              </div>
+            </div>
+          </div>
+          
+          <div class="card p-6">
+            <h3 class="font-display font-bold text-lg mb-4 flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-5 h-5 text-purple-500"></i>
+              AI Configuration
+            </h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div>
+                  <div class="font-medium">AI Responses Enabled</div>
+                  <div class="text-sm text-slate-500">Uses Claude to generate responses</div>
+                </div>
+                <label class="relative inline-flex cursor-pointer">
+                  <input type="checkbox" id="cfgAiEnabled" class="sr-only peer" checked>
+                  <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-orange-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                </label>
+              </div>
+              <div>
+                <label class="text-sm text-slate-500 font-medium">AI Model</label>
+                <select id="cfgModel" class="form-input">
+                  <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (Recommended)</option>
+                  <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                  <option value="claude-3-haiku-20240307">Claude 3 Haiku (Faster)</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-slate-500 font-medium">Max Tokens</label>
+                <input type="number" id="cfgMaxTokens" class="form-input" value="500" min="100" max="2000">
+                <p class="text-xs text-slate-400 mt-1">Higher = longer responses, more cost</p>
+              </div>
+              <div>
+                <label class="text-sm text-slate-500 font-medium">Temperature</label>
+                <input type="range" id="cfgTemperature" class="w-full" min="0" max="1" step="0.1" value="0.7">
+                <div class="flex justify-between text-xs text-slate-400">
+                  <span>Precise (0)</span>
+                  <span id="tempValue">0.7</span>
+                  <span>Creative (1)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card p-6 lg:col-span-2">
+            <h3 class="font-display font-bold text-lg mb-4 flex items-center gap-2">
+              <i data-lucide="message-square" class="w-5 h-5 text-blue-500"></i>
+              Conversation Settings
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm text-slate-500 font-medium">Welcome Message</label>
+                <textarea id="cfgWelcome" class="form-input" rows="3" placeholder="Hi! 👋 How can I help you today?"></textarea>
+              </div>
+              <div>
+                <label class="text-sm text-slate-500 font-medium">Quick Reply Buttons (comma-separated)</label>
+                <textarea id="cfgQuickReplies" class="form-input" rows="3" placeholder="Get a Quote, Pricing Info, Service Areas"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end gap-3">
+          <button class="btn btn-outline" onclick="loadChatbotConfig()">Reset</button>
+          <button class="btn btn-primary" onclick="saveChatbotConfig()">
+            <i data-lucide="save" class="w-4 h-4 inline mr-2"></i>Save Settings
+          </button>
+        </div>
+      </div>
+      
+      <!-- System Prompt Tab -->
+      <div id="chatbotPrompt" class="chatbot-tab" style="display:none;">
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg mb-4 flex items-center gap-2">
+            <i data-lucide="terminal" class="w-5 h-5 text-green-500"></i>
+            System Prompt
+          </h3>
+          <p class="text-sm text-slate-500 mb-4">This is the main instruction set for the AI. Modify carefully - this controls how the chatbot behaves and responds.</p>
+          <textarea id="cfgSystemPrompt" class="form-input font-mono text-sm" rows="20" placeholder="You are a helpful AI assistant..."></textarea>
+          
+          <h3 class="font-display font-bold text-lg mt-6 mb-4 flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-5 h-5 text-orange-500"></i>
+            Additional Instructions
+          </h3>
+          <p class="text-sm text-slate-500 mb-4">Add extra instructions that will be appended to the main prompt. Good for temporary changes or special handling.</p>
+          <textarea id="cfgPromptExtra" class="form-input" rows="5" placeholder="Additional instructions..."></textarea>
+          
+          <div class="flex items-center gap-2 mt-4 p-3 bg-blue-50 rounded-lg">
+            <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
+            <span class="text-sm text-blue-700">FAQ knowledge base is automatically included when "Enable FAQ Context" is on.</span>
+          </div>
+        </div>
+        
+        <div class="mt-6 flex justify-end gap-3">
+          <button class="btn btn-outline" onclick="loadChatbotConfig()">Reset</button>
+          <button class="btn btn-primary" onclick="saveChatbotConfig()">
+            <i data-lucide="save" class="w-4 h-4 inline mr-2"></i>Save Prompt
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Bot Training Section -->
+    <div id="botTraining" class="section">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">Bot Training & Testing</h1>
+      </div>
+      
+      <!-- Training Tabs -->
+      <div class="card mb-6">
+        <div class="p-4 border-b flex gap-2">
+          <button class="tab active" id="tabSimulator" onclick="showTrainingTab('simulator')">Chat Simulator</button>
+          <button class="tab" id="tabTrainingLog" onclick="showTrainingTab('trainingLog')">Training Log</button>
+          <button class="tab" id="tabKnowledge" onclick="showTrainingTab('knowledge')">Knowledge Base</button>
+        </div>
+      </div>
+      
+      <!-- Chat Simulator Tab -->
+      <div id="trainingSimulator" class="training-tab">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Chat Window -->
+          <div class="card">
+            <div class="p-4 border-b bg-slate-800 text-white rounded-t-xl">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">🏠</div>
+                <div>
+                  <h3 class="font-semibold">Paige - Test Mode</h3>
+                  <p class="text-xs text-slate-400">Test bot responses and rate them</p>
+                </div>
+                <button class="ml-auto btn btn-sm bg-slate-200 hover:bg-slate-300" onclick="resetSimulator()">
+                  <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i>Reset
+                </button>
+              </div>
+              <!-- Lead tracking panel -->
+              <div id="simLeadTracker" class="px-4 py-2 bg-slate-100 text-xs border-b flex flex-wrap gap-2">
+                <span class="text-slate-500">Collecting:</span>
+                <span id="simLeadStatus" class="font-mono text-slate-600">job → urgency → name → zip → phone → email → address</span>
+              </div>
+            </div>
+            <div id="testChatMessages" class="h-80 overflow-y-auto p-4 bg-slate-50 space-y-3">
+              <!-- Messages will appear here -->
+            </div>
+            <div class="p-4 border-t flex gap-2">
+              <input type="text" id="testChatInput" class="form-input flex-1" placeholder="Type a test message...">
+              <button class="btn btn-primary" onclick="sendTestMessage()">
+                <i data-lucide="send" class="w-4 h-4"></i>
+              </button>
+              <button class="btn btn-outline" onclick="clearTestChat()">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Response Rating Panel -->
+          <div class="card p-6">
+            <h3 class="font-display font-bold text-lg mb-4 flex items-center gap-2">
+              <i data-lucide="star" class="w-5 h-5 text-yellow-500"></i>
+              Rate Last Response
+            </h3>
+            
+            <div id="ratingPanel" class="space-y-4">
+              <div class="p-4 bg-slate-50 rounded-lg">
+                <p class="text-sm text-slate-500 mb-2">User said:</p>
+                <p id="rateUserMsg" class="font-medium text-slate-800">-</p>
+              </div>
+              
+              <div class="p-4 bg-orange-50 rounded-lg">
+                <p class="text-sm text-slate-500 mb-2">Bot responded:</p>
+                <p id="rateBotMsg" class="font-medium text-slate-800">-</p>
+              </div>
+              
+              <div class="flex gap-3">
+                <button class="btn flex-1 bg-green-500 text-white hover:bg-green-600" onclick="rateResponse('good')">
+                  <i data-lucide="thumbs-up" class="w-5 h-5 inline mr-2"></i>Good
+                </button>
+                <button class="btn flex-1 bg-red-500 text-white hover:bg-red-600" onclick="rateResponse('bad')">
+                  <i data-lucide="thumbs-down" class="w-5 h-5 inline mr-2"></i>Bad
+                </button>
+              </div>
+              
+              <!-- Correction Panel (shows when Bad is clicked) -->
+              <div id="correctionPanel" class="hidden space-y-4 pt-4 border-t">
+                <div>
+                  <label class="text-sm font-medium text-slate-700 block mb-2">What SHOULD the bot have said?</label>
+                  <textarea id="correctedResponse" class="form-input" rows="4" placeholder="Enter the correct response..."></textarea>
+                </div>
+                
+                <div>
+                  <label class="text-sm font-medium text-slate-700 block mb-2">Category</label>
+                  <select id="correctionCategory" class="form-input">
+                    <option value="Pricing">Pricing</option>
+                    <option value="Services">Services</option>
+                    <option value="Process">Process</option>
+                    <option value="Booking">Booking</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" id="addToFaq" class="w-4 h-4 accent-orange-500">
+                  <label for="addToFaq" class="text-sm text-slate-700">Add this Q&A to FAQ database</label>
+                </div>
+                
+                <button class="btn btn-primary w-full" onclick="saveCorrection()">
+                  <i data-lucide="save" class="w-4 h-4 inline mr-2"></i>Save Correction
+                </button>
+              </div>
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="mt-6 pt-6 border-t">
+              <h4 class="font-medium text-slate-700 mb-3">Training Stats</h4>
+              <div class="grid grid-cols-3 gap-4 text-center">
+                <div class="p-3 bg-green-50 rounded-lg">
+                  <div class="text-2xl font-bold text-green-600" id="goodRatings">0</div>
+                  <div class="text-xs text-slate-500">Good</div>
+                </div>
+                <div class="p-3 bg-red-50 rounded-lg">
+                  <div class="text-2xl font-bold text-red-600" id="badRatings">0</div>
+                  <div class="text-xs text-slate-500">Bad</div>
+                </div>
+                <div class="p-3 bg-blue-50 rounded-lg">
+                  <div class="text-2xl font-bold text-blue-600" id="totalRatings">0</div>
+                  <div class="text-xs text-slate-500">Total</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Training Log Tab -->
+      <div id="trainingTrainingLog" class="training-tab" style="display:none;">
+        <div class="card">
+          <div class="p-4 border-b flex justify-between items-center">
+            <h3 class="font-semibold">Training History</h3>
+            <div class="flex gap-2">
+              <select id="trainingFilter" class="form-input text-sm" onchange="loadTrainingLog()">
+                <option value="all">All Ratings</option>
+                <option value="good">Good Only</option>
+                <option value="bad">Bad Only</option>
+                <option value="unfixed">Needs Correction</option>
+              </select>
+            </div>
+          </div>
+          <div id="trainingLogList" class="divide-y max-h-[600px] overflow-y-auto">
+            <!-- Training log entries -->
+          </div>
+        </div>
+      </div>
+      
+      <!-- Knowledge Base Tab -->
+      <div id="trainingKnowledge" class="training-tab" style="display:none;">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Upload Panel -->
+          <div class="card p-6">
+            <h3 class="font-display font-bold text-lg mb-4 flex items-center gap-2">
+              <i data-lucide="upload" class="w-5 h-5 text-blue-500"></i>
+              Add Knowledge
+            </h3>
+            
+            <div class="space-y-4">
+              <div>
+                <label class="text-sm font-medium text-slate-700 block mb-2">Title</label>
+                <input type="text" id="kbTitle" class="form-input" placeholder="e.g., Pricing Guide 2024">
+              </div>
+              
+              <div>
+                <label class="text-sm font-medium text-slate-700 block mb-2">Category</label>
+                <select id="kbCategory" class="form-input">
+                  <option value="Pricing">Pricing</option>
+                  <option value="Services">Services</option>
+                  <option value="Policies">Policies</option>
+                  <option value="Training">Training</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="text-sm font-medium text-slate-700 block mb-2">Content</label>
+                <textarea id="kbContent" class="form-input" rows="8" placeholder="Paste document content, pricing info, policies, etc..."></textarea>
+              </div>
+              
+              <div>
+                <label class="text-sm font-medium text-slate-700 block mb-2">Tags (comma separated)</label>
+                <input type="text" id="kbTags" class="form-input" placeholder="e.g., pricing, rates, costs">
+              </div>
+              
+              <button class="btn btn-primary w-full" onclick="saveKnowledge()">
+                <i data-lucide="plus" class="w-4 h-4 inline mr-2"></i>Add to Knowledge Base
+              </button>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t">
+              <h4 class="font-medium text-slate-700 mb-3 flex items-center gap-2">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                Upload File
+              </h4>
+              <p class="text-xs text-slate-500 mb-3">Upload .txt or .md files to extract content</p>
+              <input type="file" id="kbFileUpload" accept=".txt,.md" class="form-input text-sm" onchange="handleFileUpload(event)">
+            </div>
+          </div>
+          
+          <!-- Knowledge Base List -->
+          <div class="lg:col-span-2">
+            <div class="card">
+              <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="font-semibold">Knowledge Base Documents</h3>
+                <div class="flex gap-2">
+                  <input type="text" id="kbSearch" class="form-input text-sm w-48" placeholder="Search..." onkeyup="searchKnowledge()">
+                </div>
+              </div>
+              <div id="knowledgeBaseList" class="divide-y max-h-[500px] overflow-y-auto">
+                <!-- Knowledge base entries -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Settings Section -->
+    <div id="settings" class="section">
+      <h1 class="font-display text-2xl font-bold text-slate-800 mb-6">Settings</h1>
+      <div class="card p-6 max-w-2xl">
+        <h3 class="font-display font-bold text-lg mb-4">Lead Pricing</h3>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div><label class="text-sm text-slate-500">SUPER Tier</label><input type="number" class="form-input" value="112.50"></div>
+          <div><label class="text-sm text-slate-500">A Tier</label><input type="number" class="form-input" value="45.00"></div>
+          <div><label class="text-sm text-slate-500">B Tier</label><input type="number" class="form-input" value="33.75"></div>
+          <div><label class="text-sm text-slate-500">C Tier</label><input type="number" class="form-input" value="22.50"></div>
+        </div>
+        <button class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Lead Modal -->
+  <div id="addLeadModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeModal('addLeadModal')"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+      <h2 class="font-display text-xl font-bold mb-4">Add New Lead</h2>
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="text-sm text-slate-500">Name</label><input type="text" id="leadName" class="form-input"></div>
+          <div><label class="text-sm text-slate-500">Phone</label><input type="text" id="leadPhone" class="form-input"></div>
+        </div>
+        <div><label class="text-sm text-slate-500">Email</label><input type="email" id="leadEmail" class="form-input"></div>
+        <div><label class="text-sm text-slate-500">Address</label><input type="text" id="leadAddress" class="form-input"></div>
+        <div class="grid grid-cols-3 gap-4">
+          <div><label class="text-sm text-slate-500">City</label><input type="text" id="leadCity" class="form-input"></div>
+          <div><label class="text-sm text-slate-500">State</label><input type="text" id="leadState" class="form-input" value="SC"></div>
+          <div><label class="text-sm text-slate-500">ZIP</label><input type="text" id="leadZip" class="form-input"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="text-sm text-slate-500">Job Type</label>
+            <select id="leadJobType" class="form-input">
+              <option>General Junk Removal</option>
+              <option>Furniture Disposal</option>
+              <option>Appliance Removal</option>
+              <option>Debris Removal</option>
+              <option>Estate Cleanout</option>
+              <option>Construction Debris</option>
+              <option>Garage Cleanout</option>
+              <option>Basement Cleanout</option>
+              <option>Attic Cleanout</option>
+              <option>Office Cleanout</option>
+              <option>Storage Unit Cleanout</option>
+              <option>Foreclosure Cleanout</option>
+              <option>Hoarding Cleanout</option>
+              <option>Hot Tub Removal</option>
+              <option>Shed Removal</option>
+              <option>Deck Removal</option>
+              <option>E-Waste Disposal</option>
+              <option>Mattress Removal</option>
+              <option>Refrigerator Removal</option>
+              <option>Washer/Dryer Removal</option>
+              <option>TV Removal</option>
+              <option>Piano Removal</option>
+              <option>Treadmill Removal</option>
+            </select>
+          </div>
+          <div><label class="text-sm text-slate-500">Tier</label>
+            <select id="leadTier" class="form-input">
+              <option value="SUPER">SUPER ($112.50)</option>
+              <option value="A">A ($45.00)</option>
+              <option value="B" selected>B ($33.75)</option>
+              <option value="C">C ($22.50)</option>
+              <option value="D">D ($13.50)</option>
+            </select>
+          </div>
+        </div>
+        <div><label class="text-sm text-slate-500">Service Details</label><textarea id="leadDetails" class="form-input" rows="2"></textarea></div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button class="btn btn-outline" onclick="closeModal('addLeadModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveLead()">Add Lead</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit FAQ Modal -->
+  <div id="addFaqModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeModal('addFaqModal')"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <h2 class="font-display text-xl font-bold mb-4" id="faqModalTitle">Add New FAQ</h2>
+      <input type="hidden" id="faqId">
+      <div class="space-y-4">
+        <div>
+          <label class="text-sm text-slate-500 font-medium">Question *</label>
+          <input type="text" id="faqQuestion" class="form-input" placeholder="e.g., How much does junk removal cost?">
+        </div>
+        <div>
+          <label class="text-sm text-slate-500 font-medium">Answer *</label>
+          <textarea id="faqAnswer" class="form-input" rows="5" placeholder="Enter the answer... Use line breaks for formatting."></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm text-slate-500 font-medium">Category</label>
+            <select id="faqCategory" class="form-input">
+              <option value="General">General</option>
+              <option value="Pricing">Pricing</option>
+              <option value="Services">Services</option>
+              <option value="Process">Process</option>
+              <option value="Booking">Booking</option>
+              <option value="Eco-Friendly">Eco-Friendly</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm text-slate-500 font-medium">Display Order</label>
+            <input type="number" id="faqOrder" class="form-input" value="0" min="0">
+          </div>
+        </div>
+        <div>
+          <label class="text-sm text-slate-500 font-medium">Keywords (comma separated)</label>
+          <input type="text" id="faqKeywords" class="form-input" placeholder="e.g., cost, price, pricing, how much, rate">
+          <p class="text-xs text-slate-400 mt-1">Keywords help the chatbot match user questions to this FAQ</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="faqActive" checked class="w-4 h-4">
+          <label for="faqActive" class="text-sm text-slate-600">Active (visible to chatbot)</label>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button class="btn btn-outline" onclick="closeModal('addFaqModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveFaq()">Save FAQ</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let leadsChart, revenueChart, tierChart;
+    let currentUser = null;
+    let isDemoMode = false; // Global flag for demo/view-only mode
+    
+    // Block all write actions in demo mode
+    function checkDemoMode(action) {
+      if (isDemoMode) {
+        alert('Demo Mode: View only. Login with admin credentials to make changes.');
+        return false;
+      }
+      return true;
+    }
+    
+    // Show demo banner
+    function showDemoBanner() {
+      const banner = document.createElement('div');
+      banner.id = 'demoBanner';
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#f97316,#ea580c);color:white;text-align:center;padding:10px;font-weight:600;z-index:10000;font-size:14px;';
+      banner.innerHTML = '👁️ DEMO MODE - View Only | <a href="login.html" style="color:white;text-decoration:underline;">Login as Admin</a> to make changes';
+      document.body.prepend(banner);
+      document.querySelector('.main-content').style.marginTop = '40px';
+    }
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+      lucide.createIcons();
+      
+      // Check authentication FIRST
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      // If there's a real session, clear demo mode and use real auth
+      if (session) {
+        localStorage.removeItem('demoMode');
+        localStorage.removeItem('proCompanyId');
+        
+        // Verify user is admin
+        const { data: user } = await supabaseClient
+          .from('users')
+          .select('*')
+          .eq('auth_id', session.user.id)
+          .single();
+        
+        if (!user || user.role !== 'admin') {
+          alert('Admin access required');
+          await supabaseClient.auth.signOut();
+          window.location.href = 'login.html';
+          return;
+        }
+        
+        currentUser = user;
+        isDemoMode = false;
+        
+        await loadDashboardData();
+        await loadApplications();
+        await loadPros();
+        await loadLeads();
+        await loadBookings();
+        initCharts();
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+        return;
+      }
+      
+      // No real session - check for demo mode
+      const demoMode = localStorage.getItem('demoMode');
+      if (demoMode === 'admin') {
+        // Demo admin mode - VIEW ONLY
+        isDemoMode = true;
+        showDemoBanner();
+        await loadDashboardData();
+        await loadApplications();
+        await loadPros();
+        await loadLeads();
+        await loadBookings();
+        initCharts();
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+        return;
+      }
+      
+      // No session and no demo mode - redirect to login
+      window.location.href = 'login.html';
+    });
+    
+    // Logout function
+    async function logout() {
+      localStorage.removeItem('demoMode');
+      localStorage.removeItem('proCompanyId');
+      await supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    }
+    
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(sectionId).classList.add('active');
+      event.target.closest('.nav-item').classList.add('active');
+      lucide.createIcons();
+    }
+    
+    async function loadDashboardData() {
+      // Get counts
+      const { count: prosCount } = await supabaseClient.from('companies').select('*', { count: 'exact', head: true });
+      const { count: leadsCount } = await supabaseClient.from('marketplace_leads').select('*', { count: 'exact', head: true });
+      const { count: bookingsCount } = await supabaseClient.from('bookings').select('*', { count: 'exact', head: true });
+      const { count: pendingCount } = await supabaseClient.from('pro_applications').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+      
+      // Calculate revenue from CRM leads
+      const { data: crmLeads } = await supabaseClient.from('crm_leads').select('price');
+      const revenue = crmLeads ? crmLeads.reduce((sum, l) => sum + (parseFloat(l.price) || 0), 0) : 0;
+      
+      document.getElementById('totalPros').textContent = prosCount || 0;
+      document.getElementById('totalLeads').textContent = leadsCount || 0;
+      document.getElementById('totalRevenue').textContent = revenue.toFixed(2);
+      document.getElementById('totalBookings').textContent = bookingsCount || 0;
+      document.getElementById('pendingApps').textContent = pendingCount || 0;
+      document.getElementById('appBadge').textContent = pendingCount || 0;
+      
+      // Conversion rate
+      const { count: wonCount } = await supabaseClient.from('crm_leads').select('*', { count: 'exact', head: true }).eq('status', 'won');
+      const { count: totalCrm } = await supabaseClient.from('crm_leads').select('*', { count: 'exact', head: true });
+      const convRate = totalCrm > 0 ? ((wonCount / totalCrm) * 100).toFixed(1) : 0;
+      document.getElementById('conversionRate').textContent = convRate + '%';
+      
+      // MTD Revenue from paid invoices
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { data: paidInvoices } = await supabaseClient
+        .from('invoices')
+        .select('total')
+        .eq('status', 'paid')
+        .gte('created_at', startOfMonth);
+      const mtdRevenue = paidInvoices ? paidInvoices.reduce((sum, inv) => sum + (parseFloat(inv.total) || 0), 0) : 0;
+      document.getElementById('mtdRevenue').textContent = mtdRevenue.toFixed(2);
+    }
+    
+    function initCharts() {
+      // Leads Chart
+      leadsChart = new Chart(document.getElementById('leadsChart'), {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Leads',
+            data: [12, 19, 15, 25, 22, 18, 30],
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249,115,22,0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+      
+      // Revenue Chart
+      revenueChart = new Chart(document.getElementById('revenueChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Revenue',
+            data: [450, 720, 540, 980, 850, 620, 1100],
+            backgroundColor: '#22c55e'
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+      
+      // Tier Chart
+      tierChart = new Chart(document.getElementById('tierChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['SUPER', 'A', 'B', 'C', 'D'],
+          datasets: [{
+            data: [15, 30, 25, 20, 10],
+            backgroundColor: ['#22c55e', '#f97316', '#eab308', '#06b6d4', '#94a3b8']
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+    
+    async function loadApplications(filter = 'all') {
+      let query = supabaseClient.from('pro_applications').select('*').order('created_at', { ascending: false });
+      if (filter !== 'all') query = query.eq('status', filter);
+      const { data } = await query;
+      
+      const container = document.getElementById('applicationsList');
+      container.innerHTML = data && data.length ? data.map(app => `
+        <div class="table-row" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 120px;">
+          <div><div class="font-semibold text-slate-800">${app.business_name}</div><div class="text-sm text-slate-500">${app.services?.join(', ') || '-'}</div></div>
+          <div><div>${app.contact_name}</div><div class="text-sm text-slate-500">${app.email}</div></div>
+          <div>${app.city}, ${app.state}</div>
+          <div><span class="badge badge-${app.status}">${app.status}</span></div>
+          <div class="text-sm text-slate-500">${new Date(app.created_at).toLocaleDateString()}</div>
+          <div class="flex gap-2">
+            ${app.status === 'pending' ? `
+              <button class="btn btn-success text-xs px-2 py-1" onclick="approveApplication('${app.id}')">Approve</button>
+              <button class="btn btn-danger text-xs px-2 py-1" onclick="rejectApplication('${app.id}')">Reject</button>
+            ` : ''}
+          </div>
+        </div>
+      `).join('') : '<div class="p-8 text-center text-slate-400">No applications found</div>';
+    }
+    
+    function filterApplications(status) { loadApplications(status); }
+    
+    async function approveApplication(id) {
+      if (!checkDemoMode('approve')) return;
+      const { data: app } = await supabaseClient.from('pro_applications').select('*').eq('id', id).single();
+      if (!app) return;
+      
+      // Create company from application
+      await supabaseClient.from('companies').insert({
+        name: app.business_name,
+        email: app.email,
+        phone: app.phone,
+        city: app.city,
+        state: app.state,
+        zip: app.zip_codes?.split(',')[0]?.trim(),
+        services: app.services,
+        service_radius: app.service_radius,
+        zip_codes: app.zip_codes
+      });
+      
+      // Update application status
+      await supabaseClient.from('pro_applications').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id);
+      
+      loadApplications();
+      loadPros();
+      loadDashboardData();
+      alert('Application approved! Pro account created.');
+    }
+    
+    async function rejectApplication(id) {
+      if (!checkDemoMode('reject')) return;
+      if (!confirm('Reject this application?')) return;
+      await supabaseClient.from('pro_applications').update({ status: 'rejected', reviewed_at: new Date().toISOString() }).eq('id', id);
+      loadApplications();
+      loadDashboardData();
+    }
+    
+    async function loadPros() {
+      const { data } = await supabaseClient.from('companies').select('*').order('created_at', { ascending: false });
+      const container = document.getElementById('prosList');
+      container.innerHTML = data && data.length ? data.map(pro => `
+        <div class="table-row" style="grid-template-columns: 2fr 1.5fr 1fr 1fr 1fr 100px;">
+          <div><div class="font-semibold text-slate-800">${pro.name}</div><div class="text-sm text-slate-500">${pro.services?.join(', ') || '-'}</div></div>
+          <div><div>${pro.email}</div><div class="text-sm text-slate-500">${pro.phone || '-'}</div></div>
+          <div>${pro.leads_purchased || 0}</div>
+          <div>$${(pro.total_spent || 0).toFixed(2)}</div>
+          <div><span class="badge ${pro.is_active !== false ? 'badge-approved' : 'badge-rejected'}">${pro.is_active !== false ? 'Active' : 'Inactive'}</span></div>
+          <div><button class="btn btn-outline text-xs" onclick="editPro('${pro.id}')">Edit</button></div>
+        </div>
+      `).join('') : '<div class="p-8 text-center text-slate-400">No pros found</div>';
+    }
+    
+    async function loadLeads() {
+      const filter = document.getElementById('leadsFilter')?.value || 'all';
+      let query = supabaseClient.from('marketplace_leads').select('*').order('created_at', { ascending: false }).limit(50);
+      if (filter === 'available') query = query.eq('available', true);
+      if (filter === 'sold') query = query.eq('available', false);
+      const { data } = await query;
+      
+      // Matching index.html tier colors
+      const tierBgColors = { 
+        SUPER: 'border-l-green-500 bg-gradient-to-r from-green-50 to-white', 
+        A: 'border-l-orange-500 bg-gradient-to-r from-orange-50 to-white', 
+        B: 'border-l-yellow-500 bg-gradient-to-r from-yellow-50 to-white', 
+        C: 'border-l-cyan-500 bg-gradient-to-r from-cyan-50 to-white', 
+        D: 'border-l-gray-400 bg-gradient-to-r from-gray-50 to-white'
+      };
+      const tierBadgeColors = { 
+        SUPER: 'bg-green-100 text-green-700', 
+        A: 'bg-orange-100 text-orange-700', 
+        B: 'bg-yellow-100 text-yellow-700', 
+        C: 'bg-cyan-100 text-cyan-700', 
+        D: 'bg-gray-100 text-gray-600' 
+      };
+      
+      const container = document.getElementById('leadsList');
+      container.innerHTML = data && data.length ? data.map(lead => `
+        <div class="bg-white border-l-4 ${tierBgColors[lead.tier] || 'border-l-gray-300'} rounded-xl p-5 shadow-sm hover:shadow-md transition">
+          <div class="flex justify-between items-start mb-3">
+            <span class="badge ${tierBadgeColors[lead.tier] || ''}">${lead.tier} Tier</span>
+            <span class="font-bold text-xl ${lead.available ? 'text-green-600' : 'text-gray-400'}">$${lead.price}</span>
+          </div>
+          <div class="font-bold text-slate-800 mb-1">${lead.name}</div>
+          <div class="text-sm text-slate-500 mb-1">${lead.phone}</div>
+          <div class="text-sm text-slate-500 mb-2"><i data-lucide="map-pin" class="w-4 h-4 inline"></i> ${lead.city}, ${lead.state} ${lead.zip}</div>
+          <div class="text-sm text-slate-600 mb-3">${lead.job_type || 'General'}</div>
+          <div class="flex justify-between items-center">
+            <span class="badge ${lead.available ? 'badge-approved' : 'badge-pending'}">${lead.available ? 'Available' : 'Sold'}</span>
+            <button class="btn btn-outline text-xs" onclick="editLead('${lead.id}')">Edit</button>
+          </div>
+        </div>
+      `).join('') : '<div class="col-span-4 p-8 text-center text-slate-400">No leads found</div>';
+      lucide.createIcons();
+    }
+    
+    async function loadBookings(filter = 'all') {
+      let query = supabaseClient.from('bookings').select('*').order('created_at', { ascending: false }).limit(50);
+      if (filter === 'demo') query = query.eq('source', 'demo');
+      if (filter === 'booking') query = query.neq('source', 'demo');
+      const { data } = await query;
+      const container = document.getElementById('bookingsList');
+      container.innerHTML = data && data.length ? data.map(b => `
+        <div class="table-row" style="grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 100px;">
+          <div><div class="font-semibold text-slate-800">${b.customer_name}</div><div class="text-sm text-slate-500">${b.customer_phone}</div><div class="text-xs text-slate-400">${b.customer_email || ''}</div></div>
+          <div>
+            ${b.source === 'demo' ? '<span class="badge bg-purple-100 text-purple-700 mr-2">DEMO</span>' : ''}
+            ${b.service_type}
+            ${b.notes ? '<div class="text-xs text-slate-400">' + b.notes + '</div>' : ''}
+          </div>
+          <div>${b.preferred_date}</div>
+          <div>${b.preferred_time}</div>
+          <div><span class="badge badge-${b.status === 'confirmed' ? 'approved' : 'pending'}">${b.status}</span></div>
+          <div>
+            <button class="btn btn-success text-xs px-2 py-1" onclick="confirmBooking('${b.id}')">Confirm</button>
+          </div>
+        </div>
+      `).join('') : '<div class="p-8 text-center text-slate-400">No bookings found</div>';
+    }
+    
+    function filterBookings(status) { loadBookings(status); }
+    
+    async function confirmBooking(id) {
+      if (!checkDemoMode('confirm')) return;
+      await supabaseClient.from('bookings').update({ status: 'confirmed' }).eq('id', id);
+      loadBookings();
+      alert('Booking confirmed!');
+    }
+    
+    function openAddLeadModal() { 
+      if (!checkDemoMode('add lead')) return;
+      document.getElementById('addLeadModal').classList.remove('hidden'); 
+    }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function openModal(id) { 
+      if (!checkDemoMode('open')) return;
+      document.getElementById(id).classList.remove('hidden'); 
+    }
+    
+    async function saveLead() {
+      if (!checkDemoMode('save lead')) return;
+      const tierPrices = { SUPER: 112.50, A: 45.00, B: 33.75, C: 22.50, D: 13.50 };
+      const tier = document.getElementById('leadTier').value;
+      const lead = {
+        name: document.getElementById('leadName').value,
+        phone: document.getElementById('leadPhone').value,
+        email: document.getElementById('leadEmail').value,
+        address: document.getElementById('leadAddress').value,
+        city: document.getElementById('leadCity').value,
+        state: document.getElementById('leadState').value,
+        zip: document.getElementById('leadZip').value,
+        job_type: document.getElementById('leadJobType').value,
+        service_details: document.getElementById('leadDetails').value,
+        tier: tier,
+        price: tierPrices[tier],
+        available: true
+      };
+      
+      const { error } = await supabaseClient.from('marketplace_leads').insert(lead);
+      if (error) { alert('Error: ' + error.message); return; }
+      
+      closeModal('addLeadModal');
+      loadLeads();
+      loadDashboardData();
+      alert('Lead added successfully!');
+    }
+    
+    // ========== FAQ MANAGEMENT ==========
+    let allFaqs = [];
+    let currentFaqFilter = 'all';
+    
+    async function loadFaqs() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('chatbot_faqs')
+          .select('*')
+          .order('display_order', { ascending: true });
+        
+        if (error) throw error;
+        allFaqs = data || [];
+        renderFaqs();
+      } catch (err) {
+        console.error('Error loading FAQs:', err);
+        document.getElementById('faqList').innerHTML = `
+          <div class="p-8 text-center text-red-500">
+            <i data-lucide="alert-circle" class="w-8 h-8 mx-auto mb-2"></i>
+            <p>Error loading FAQs</p>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+    }
+    
+    function filterFaqs(category, btn) {
+      currentFaqFilter = category;
+      document.querySelectorAll('#chatbot .tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderFaqs();
+    }
+    
+    function renderFaqs() {
+      const filtered = currentFaqFilter === 'all' 
+        ? allFaqs 
+        : allFaqs.filter(f => f.category === currentFaqFilter);
+      
+      if (filtered.length === 0) {
+        document.getElementById('faqList').innerHTML = `
+          <div class="p-8 text-center text-slate-400">
+            <i data-lucide="message-circle" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+            <p>No FAQs found</p>
+            <button class="btn btn-primary mt-4" onclick="openModal('addFaqModal')">Add First FAQ</button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+      
+      const html = filtered.map(faq => `
+        <div class="table-row grid-cols-[1fr_auto] gap-4 ${!faq.is_active ? 'opacity-50' : ''}">
+          <div>
+            <div class="font-semibold text-slate-800 mb-1">${escapeHtml(faq.question)}</div>
+            <div class="text-sm text-slate-500 line-clamp-2">${escapeHtml(faq.answer).substring(0, 150)}${faq.answer.length > 150 ? '...' : ''}</div>
+            <div class="flex gap-2 mt-2">
+              <span class="badge bg-slate-100 text-slate-600">${faq.category}</span>
+              ${faq.keywords ? faq.keywords.slice(0, 3).map(k => `<span class="text-xs bg-orange-50 text-orange-600 px-2 py-0.5 rounded">${k}</span>`).join('') : ''}
+              ${!faq.is_active ? '<span class="badge bg-red-100 text-red-600">Inactive</span>' : ''}
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-outline btn-sm" onclick="editFaq('${faq.id}')">
+              <i data-lucide="edit" class="w-4 h-4"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteFaq('${faq.id}')">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+      
+      document.getElementById('faqList').innerHTML = html;
+      lucide.createIcons();
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function editFaq(id) {
+      if (!checkDemoMode('edit FAQ')) return;
+      const faq = allFaqs.find(f => f.id === id);
+      if (!faq) return;
+      
+      document.getElementById('faqModalTitle').textContent = 'Edit FAQ';
+      document.getElementById('faqId').value = faq.id;
+      document.getElementById('faqQuestion').value = faq.question;
+      document.getElementById('faqAnswer').value = faq.answer;
+      document.getElementById('faqCategory').value = faq.category || 'General';
+      document.getElementById('faqOrder').value = faq.display_order || 0;
+      document.getElementById('faqKeywords').value = (faq.keywords || []).join(', ');
+      document.getElementById('faqActive').checked = faq.is_active !== false;
+      
+      openModal('addFaqModal');
+    }
+    
+    async function saveFaq() {
+      if (!checkDemoMode('save FAQ')) return;
+      const id = document.getElementById('faqId').value;
+      const question = document.getElementById('faqQuestion').value.trim();
+      const answer = document.getElementById('faqAnswer').value.trim();
+      const category = document.getElementById('faqCategory').value;
+      const order = parseInt(document.getElementById('faqOrder').value) || 0;
+      const keywordsStr = document.getElementById('faqKeywords').value;
+      const isActive = document.getElementById('faqActive').checked;
+      
+      if (!question || !answer) {
+        alert('Question and Answer are required');
+        return;
+      }
+      
+      const keywords = keywordsStr.split(',').map(k => k.trim().toLowerCase()).filter(k => k);
+      
+      const faqData = {
+        question,
+        answer,
+        category,
+        display_order: order,
+        keywords: keywords.length > 0 ? keywords : null,
+        is_active: isActive,
+        updated_at: new Date().toISOString()
+      };
+      
+      try {
+        let error;
+        if (id) {
+          // Update existing
+          const result = await supabaseClient
+            .from('chatbot_faqs')
+            .update(faqData)
+            .eq('id', id);
+          error = result.error;
+        } else {
+          // Insert new
+          const result = await supabaseClient
+            .from('chatbot_faqs')
+            .insert(faqData);
+          error = result.error;
+        }
+        
+        if (error) throw error;
+        
+        closeModal('addFaqModal');
+        resetFaqForm();
+        loadFaqs();
+        alert(id ? 'FAQ updated!' : 'FAQ added!');
+      } catch (err) {
+        alert('Error saving FAQ: ' + err.message);
+      }
+    }
+    
+    async function deleteFaq(id) {
+      if (!checkDemoMode('delete FAQ')) return;
+      if (!confirm('Are you sure you want to delete this FAQ?')) return;
+      
+      try {
+        const { error } = await supabaseClient
+          .from('chatbot_faqs')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+        loadFaqs();
+        alert('FAQ deleted!');
+      } catch (err) {
+        alert('Error deleting FAQ: ' + err.message);
+      }
+    }
+    
+    function resetFaqForm() {
+      document.getElementById('faqModalTitle').textContent = 'Add New FAQ';
+      document.getElementById('faqId').value = '';
+      document.getElementById('faqQuestion').value = '';
+      document.getElementById('faqAnswer').value = '';
+      document.getElementById('faqCategory').value = 'General';
+      document.getElementById('faqOrder').value = '0';
+      document.getElementById('faqKeywords').value = '';
+      document.getElementById('faqActive').checked = true;
+    }
+    
+    // Load FAQs when chatbot section is shown
+    const originalShowSection = showSection;
+    showSection = function(sectionId) {
+      originalShowSection(sectionId);
+      if (sectionId === 'chatbot') {
+        loadFaqs();
+        loadChatbotConfig();
+      }
+    };
+    
+    // ========== CHATBOT CONFIG MANAGEMENT ==========
+    let chatbotConfig = {};
+    
+    function showChatbotTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.chatbot-tab').forEach(t => t.style.display = 'none');
+      document.querySelectorAll('#chatbot .tab').forEach(t => t.classList.remove('active'));
+      
+      // Show selected tab
+      if (tabName === 'faqs') {
+        document.getElementById('chatbotFaqs').style.display = 'block';
+        document.getElementById('tabFaqs').classList.add('active');
+      } else if (tabName === 'knowledgeBase') {
+        document.getElementById('chatbotKnowledgeBase').style.display = 'block';
+        document.getElementById('tabKnowledgeBase').classList.add('active');
+        loadKnowledgeBaseChatbot();
+      } else if (tabName === 'settings') {
+        document.getElementById('chatbotSettings').style.display = 'block';
+        document.getElementById('tabSettings').classList.add('active');
+      } else if (tabName === 'prompt') {
+        document.getElementById('chatbotPrompt').style.display = 'block';
+        document.getElementById('tabPrompt').classList.add('active');
+      }
+      lucide.createIcons();
+    }
+    
+    // ========== KNOWLEDGE BASE (CHATBOT SECTION) ==========
+    async function loadKnowledgeBaseChatbot() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('chatbot_knowledge_base')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('knowledgeBaseListChatbot');
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div class="p-8 text-center text-slate-400"><i data-lucide="database" class="w-12 h-12 mx-auto mb-4 opacity-50"></i><p>No knowledge base documents yet</p><p class="text-xs mt-2">Add documents to give the bot more context</p></div>';
+          lucide.createIcons();
+          return;
+        }
+        
+        container.innerHTML = data.map(kb => `
+          <div class="p-4 hover:bg-slate-50 ${!kb.is_active ? 'opacity-50' : ''}">
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
+                  <span class="font-semibold text-slate-800">${escapeHtml(kb.title)}</span>
+                  <span class="badge bg-slate-100 text-slate-600 text-xs">${kb.category}</span>
+                  ${!kb.is_active ? '<span class="badge bg-red-100 text-red-600 text-xs">Inactive</span>' : ''}
+                </div>
+                <p class="text-sm text-slate-500 line-clamp-2">${escapeHtml(kb.content.substring(0, 150))}${kb.content.length > 150 ? '...' : ''}</p>
+                <div class="flex gap-2 mt-2">
+                  ${(kb.tags || []).slice(0,4).map(t => `<span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">${t}</span>`).join('')}
+                </div>
+              </div>
+              <div class="flex gap-2 ml-4">
+                <button class="btn btn-outline btn-sm" onclick="toggleKbActive('${kb.id}', ${!kb.is_active})">
+                  <i data-lucide="${kb.is_active ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteKnowledgeChatbot('${kb.id}')">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        
+        lucide.createIcons();
+      } catch (e) {
+        console.error('Error loading knowledge base:', e);
+      }
+    }
+    
+    async function saveKnowledgeFromChatbot() {
+      if (!checkDemoMode('save knowledge')) return;
+      
+      const title = document.getElementById('kbTitle').value.trim();
+      const content = document.getElementById('kbContent').value.trim();
+      const category = document.getElementById('kbCategory').value;
+      const tagsStr = document.getElementById('kbTags').value;
+      const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+      
+      if (!title || !content) {
+        alert('Title and content are required');
+        return;
+      }
+      
+      try {
+        const { error } = await supabaseClient.from('chatbot_knowledge_base').insert({
+          title, content, category, tags, is_active: true
+        });
+        
+        if (error) throw error;
+        
+        document.getElementById('kbTitle').value = '';
+        document.getElementById('kbContent').value = '';
+        document.getElementById('kbTags').value = '';
+        
+        loadKnowledgeBaseChatbot();
+        alert('✓ Knowledge added! Bot will use this in responses within 30 seconds.');
+        
+      } catch (e) {
+        console.error('Error saving knowledge:', e);
+        alert('Error: ' + e.message);
+      }
+    }
+    
+    async function deleteKnowledgeChatbot(id) {
+      if (!checkDemoMode('delete knowledge')) return;
+      if (!confirm('Delete this knowledge base entry?')) return;
+      
+      try {
+        await supabaseClient.from('chatbot_knowledge_base').delete().eq('id', id);
+        loadKnowledgeBaseChatbot();
+      } catch (e) {
+        console.error('Error deleting:', e);
+      }
+    }
+    
+    async function toggleKbActive(id, newState) {
+      if (!checkDemoMode('update knowledge')) return;
+      
+      try {
+        await supabaseClient.from('chatbot_knowledge_base').update({ is_active: newState }).eq('id', id);
+        loadKnowledgeBaseChatbot();
+      } catch (e) {
+        console.error('Error updating:', e);
+      }
+    }
+    
+    function searchKnowledgeChatbot() {
+      const query = document.getElementById('kbSearchChatbot').value.toLowerCase();
+      const items = document.querySelectorAll('#knowledgeBaseListChatbot > div');
+      items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    }
+    
+    function handleFileUploadChatbot(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('kbTitle').value = file.name.replace(/\.[^/.]+$/, '');
+        document.getElementById('kbContent').value = e.target.result;
+      };
+      reader.readAsText(file);
+    }
+    
+    async function loadChatbotConfig() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('chatbot_config')
+          .select('config_key, config_value');
+        
+        if (error) throw error;
+        
+        chatbotConfig = {};
+        (data || []).forEach(row => {
+          chatbotConfig[row.config_key] = row.config_value;
+        });
+        
+        // Populate form fields
+        document.getElementById('cfgBusinessName').value = chatbotConfig.business_name || '';
+        document.getElementById('cfgTagline').value = chatbotConfig.business_tagline || '';
+        document.getElementById('cfgPhone').value = chatbotConfig.phone_number || '';
+        document.getElementById('cfgHours').value = chatbotConfig.business_hours || '';
+        document.getElementById('cfgAiEnabled').checked = chatbotConfig.ai_enabled !== 'false';
+        document.getElementById('cfgModel').value = chatbotConfig.ai_model || chatbotConfig.model || 'claude-sonnet-4-20250514';
+        document.getElementById('cfgMaxTokens').value = chatbotConfig.max_tokens || '500';
+        document.getElementById('cfgTemperature').value = chatbotConfig.temperature || '0.7';
+        document.getElementById('tempValue').textContent = chatbotConfig.temperature || '0.7';
+        document.getElementById('cfgWelcome').value = chatbotConfig.welcome_message || chatbotConfig.greeting_message || '';
+        document.getElementById('cfgQuickReplies').value = chatbotConfig.quick_replies || '';
+        document.getElementById('cfgSystemPrompt').value = chatbotConfig.system_prompt || '';
+        document.getElementById('cfgPromptExtra').value = chatbotConfig.system_prompt_extra || '';
+        
+      } catch (err) {
+        console.error('Error loading chatbot config:', err);
+      }
+    }
+    
+    async function saveChatbotConfig() {
+      if (!checkDemoMode('save chatbot config')) return;
+      const configs = [
+        { key: 'business_name', value: document.getElementById('cfgBusinessName').value },
+        { key: 'business_tagline', value: document.getElementById('cfgTagline').value },
+        { key: 'phone_number', value: document.getElementById('cfgPhone').value },
+        { key: 'business_hours', value: document.getElementById('cfgHours').value },
+        { key: 'ai_enabled', value: document.getElementById('cfgAiEnabled').checked ? 'true' : 'false' },
+        { key: 'ai_model', value: document.getElementById('cfgModel').value },
+        { key: 'max_tokens', value: document.getElementById('cfgMaxTokens').value },
+        { key: 'temperature', value: document.getElementById('cfgTemperature').value },
+        { key: 'welcome_message', value: document.getElementById('cfgWelcome').value },
+        { key: 'quick_replies', value: document.getElementById('cfgQuickReplies').value },
+        { key: 'system_prompt', value: document.getElementById('cfgSystemPrompt').value },
+        { key: 'system_prompt_extra', value: document.getElementById('cfgPromptExtra').value },
+      ];
+      
+      try {
+        for (const cfg of configs) {
+          if (!cfg.value && cfg.value !== '') continue;
+          
+          const { error } = await supabaseClient
+            .from('chatbot_config')
+            .upsert({ 
+              config_key: cfg.key, 
+              config_value: cfg.value,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'config_key' });
+          
+          if (error) console.error('Error saving', cfg.key, error);
+        }
+        
+        alert('Settings saved successfully!');
+        loadChatbotConfig();
+      } catch (err) {
+        alert('Error saving settings: ' + err.message);
+      }
+    }
+    
+    // Temperature slider update
+    document.addEventListener('DOMContentLoaded', function() {
+      const tempSlider = document.getElementById('cfgTemperature');
+      if (tempSlider) {
+        tempSlider.addEventListener('input', function() {
+          document.getElementById('tempValue').textContent = this.value;
+        });
+      }
+    });
+    
+    // ========== SIDEBAR TOGGLE ==========
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.getElementById('sidebarToggle');
+      const mainContent = document.querySelector('.main-content');
+      
+      sidebar.classList.toggle('collapsed');
+      toggle.classList.toggle('collapsed');
+      mainContent.classList.toggle('expanded');
+      
+      lucide.createIcons();
+    }
+    
+    // Auto-collapse on mobile
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.innerWidth < 768) {
+        toggleSidebar();
+      }
+    });
+    
+    // ========== BOT TRAINING FUNCTIONS ==========
+    let currentTestMessage = null;
+    let currentBotResponse = null;
+    let trainingStats = { good: 0, bad: 0, total: 0 };
+    
+    function showTrainingTab(tabName) {
+      document.querySelectorAll('.training-tab').forEach(t => t.style.display = 'none');
+      document.querySelectorAll('#botTraining .tab').forEach(t => t.classList.remove('active'));
+      
+      if (tabName === 'simulator') {
+        document.getElementById('trainingSimulator').style.display = 'block';
+        document.getElementById('tabSimulator').classList.add('active');
+      } else if (tabName === 'trainingLog') {
+        document.getElementById('trainingTrainingLog').style.display = 'block';
+        document.getElementById('tabTrainingLog').classList.add('active');
+        loadTrainingLog();
+      } else if (tabName === 'knowledge') {
+        document.getElementById('trainingKnowledge').style.display = 'block';
+        document.getElementById('tabKnowledge').classList.add('active');
+        loadKnowledgeBase();
+      }
+      lucide.createIcons();
+    }
+    
+    // ========== SIMULATOR - MIRRORS CHATBOT.JS EXACTLY ==========
+    
+    // Knowledge stores (same as chatbot.js)
+    let testKnowledge = {
+      faqs: [],
+      knowledgeBase: [],
+      trainedResponses: []
+    };
+    
+    // Simulated lead data (for realistic conversation flow)
+    let simLead = {
+      job_type: null, urgency: null, name: null, 
+      zip: null, phone: null, email: null, address: null
+    };
+    let simState = {
+      currentStep: 'greeting',
+      awaitingLastName: false
+    };
+    
+    function resetSimulator() {
+      simLead = { job_type: null, urgency: null, name: null, zip: null, phone: null, email: null, address: null };
+      simState = { currentStep: 'greeting', awaitingLastName: false };
+      document.getElementById('testChatMessages').innerHTML = `
+        <div class="flex gap-2">
+          <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">🏠</div>
+          <div class="bg-white px-4 py-2 rounded-2xl rounded-bl-sm shadow-sm">Hi! I'm Paige, your junk removal assistant. 👋 What can I help you with today?</div>
+        </div>
+      `;
+    }
+    
+    // Load knowledge (same as chatbot.js)
+    async function loadTestKnowledge() {
+      try {
+        const { data: faqs } = await supabaseClient.from('chatbot_faqs').select('*').eq('is_active', true);
+        testKnowledge.faqs = faqs || [];
+        
+        const { data: kb } = await supabaseClient.from('chatbot_knowledge_base').select('*').eq('is_active', true);
+        testKnowledge.knowledgeBase = kb || [];
+        
+        const { data: trained } = await supabaseClient.from('chatbot_training').select('*').eq('rating', 'bad').not('corrected_response', 'is', null);
+        testKnowledge.trainedResponses = trained || [];
+        
+        console.log('[Test] Loaded:', { faqs: testKnowledge.faqs.length, kb: testKnowledge.knowledgeBase.length, trained: testKnowledge.trainedResponses.length });
+      } catch (e) {
+        console.error('Error loading test knowledge:', e);
+      }
+    }
+    
+    // Match scoring (same as chatbot.js)
+    function matchScore(userInput, text, keywords = []) {
+      const words = userInput.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      const textLower = (text || '').toLowerCase();
+      let score = 0;
+
+      (keywords || []).forEach(kw => {
+        if (userInput.toLowerCase().includes(kw.toLowerCase())) score += 15;
+      });
+
+      words.forEach(word => {
+        if (textLower.includes(word)) score += 3;
+      });
+
+      if (textLower.includes(userInput.toLowerCase())) score += 20;
+
+      return score;
+    }
+    
+    // Find knowledge response (same as chatbot.js)
+    function findKnowledgeResponse(userInput) {
+      let bestMatch = null;
+      let bestScore = 0;
+
+      console.log('[Sim] Finding response for:', userInput);
+      console.log('[Sim] Trained responses available:', testKnowledge.trainedResponses.length);
+
+      // 1. Trained corrections (highest priority) - LOWER threshold to 5
+      testKnowledge.trainedResponses.forEach(tr => {
+        const score = matchScore(userInput, tr.user_message, []);
+        console.log('[Sim] Trained check:', tr.user_message.substring(0, 30), '-> Score:', score);
+        if (score > bestScore && score >= 5) {
+          bestScore = score;
+          bestMatch = { response: sanitizeResponse(tr.corrected_response), source: 'trained', score };
+        }
+      });
+
+      // 2. FAQs
+      testKnowledge.faqs.forEach(faq => {
+        const score = matchScore(userInput, faq.question, faq.keywords);
+        if (score > bestScore && score >= 8) {
+          bestScore = score;
+          bestMatch = { response: sanitizeResponse(faq.answer), source: 'faq', score };
+        }
+      });
+
+      // 3. Knowledge Base - ONLY if response_template exists (customer-facing)
+      testKnowledge.knowledgeBase.forEach(kb => {
+        if (!kb.response_template) return; // Skip training-only KB entries
+        
+        const score = matchScore(userInput, kb.title + ' ' + kb.content, kb.tags);
+        if (score > bestScore && score >= 10) {
+          bestScore = score;
+          bestMatch = { response: sanitizeResponse(kb.response_template), source: 'kb', score };
+        }
+      });
+
+      console.log('[Sim] Best match:', bestMatch ? bestMatch.source : 'none', 'Score:', bestScore);
+      return bestMatch;
+    }
+    
+    // Clean backend formatting from responses
+    function sanitizeResponse(text) {
+      if (!text) return '';
+      return text
+        .replace(/^Rule \d+:?\s*/gi, '')
+        .replace(/^Step \d+:?\s*/gi, '')
+        .replace(/^#+ /gm, '')
+        .replace(/\*\*/g, '')
+        .replace(/^\s*[-•]\s*/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+    
+    // Detect questions (same as chatbot.js)
+    function detectQuestion(text) {
+      const lower = text.toLowerCase();
+      const patterns = [
+        { regex: /how much|cost|price|pricing|charge|rate|fee|ball\s?park|estimate|expensive|cheap/i, type: 'pricing' },
+        { regex: /where.*serve|service area|what area|do you come to|coverage/i, type: 'service_area' },
+        { regex: /what.*remove|do you take|can you remove|accept|haul away/i, type: 'services' },
+        { regex: /same[- ]?day|today|how soon|how fast|when can|urgent|asap|emergency/i, type: 'scheduling' },
+        { regex: /how.*work|process|what happen|steps/i, type: 'process' },
+        { regex: /payment|pay|cash|card|credit|venmo|check/i, type: 'payment' },
+        { regex: /recycle|donate|eco|green|environment|landfill/i, type: 'eco' }
+      ];
+      for (const p of patterns) {
+        if (p.regex.test(lower)) return p.type;
+      }
+      if (/^(what|where|when|why|how|can|do|does|is|are|will|would|could)\b/i.test(lower)) return 'general_question';
+      if (/\?$/.test(lower)) return 'general_question';
+      return null;
+    }
+    
+    // Parse job type (same as chatbot.js)
+    function parseJobType(text) {
+      const lower = text.toLowerCase();
+      
+      // Context patterns
+      const fromPatterns = [
+        /(?:items?|stuff|things?|junk|furniture|everything|boxes?)\s+(?:from|in|out of|inside|at)\s+(?:the\s+)?(?:my\s+)?(\w+)/i,
+        /(?:clean(?:ing)?\s+out|clear(?:ing)?|empty(?:ing)?)\s+(?:the\s+)?(?:my\s+)?(\w+)/i,
+        /(\w+)\s+(?:clean\s*out|cleanout|clear\s*out)/i
+      ];
+      
+      const locationMap = {
+        'garage': 'Garage cleanout', 'basement': 'Basement cleanout',
+        'attic': 'Attic cleanout', 'house': 'House cleanout', 'home': 'House cleanout',
+        'office': 'Office cleanout', 'storage': 'Storage unit cleanout',
+        'shed': 'Shed cleanout', 'yard': 'Yard cleanout', 'room': 'Room cleanout'
+      };
+      
+      for (const pattern of fromPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          const location = match[1].toLowerCase();
+          if (locationMap[location]) {
+            return { type: locationMap[location], details: text };
+          }
+        }
+      }
+      
+      // Item patterns
+      const itemPatterns = {
+        'couch|sofa|loveseat|sectional': 'Furniture removal',
+        'bed|mattress': 'Mattress removal',
+        'furniture|dresser|desk|table|chair': 'Furniture removal',
+        'appliance|fridge|refrigerator|washer|dryer|stove': 'Appliance removal',
+        'tv|television|monitor|computer|electronic': 'Electronics removal',
+        'yard waste|branches|leaves|brush|tree': 'Yard waste removal',
+        'debris|construction|drywall|lumber|wood': 'Construction debris',
+        'hot tub|spa|jacuzzi': 'Hot tub removal',
+        'junk|trash|garbage|stuff': 'Junk removal'
+      };
+      
+      for (const [pattern, jobType] of Object.entries(itemPatterns)) {
+        if (new RegExp(pattern, 'i').test(lower)) {
+          return { type: jobType, details: text };
+        }
+      }
+      
+      if (/remove|haul|pick\s*up|get\s*rid|throw\s*out|dispose/i.test(lower)) {
+        return { type: 'Junk removal', details: text };
+      }
+      
+      return null;
+    }
+    
+    // Extract data from message (same as chatbot.js)
+    function extractInfo(text) {
+      const extracted = {};
+      const lower = text.toLowerCase();
+
+      // Phone
+      const phoneMatch = text.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\d{10,11}/);
+      if (phoneMatch) {
+        const digits = phoneMatch[0].replace(/\D/g, '');
+        if (digits.length >= 10) { extracted.phone = digits; if (!simLead.phone) simLead.phone = digits; }
+      }
+
+      // Email
+      const emailMatch = text.match(/[\w\.-]+@[\w\.-]+\.\w{2,}/);
+      if (emailMatch) { extracted.email = emailMatch[0]; if (!simLead.email) simLead.email = emailMatch[0]; }
+
+      // ZIP
+      const words = text.split(/[\s,]+/);
+      for (const word of words) {
+        if (/^\d{5}$/.test(word)) { extracted.zip = word; if (!simLead.zip) simLead.zip = word; break; }
+      }
+
+      // Address
+      const addrMatch = text.match(/\d+\s+[\w\s]+(?:st|street|ave|avenue|rd|road|dr|drive|ln|lane|ct|court|blvd|way|pl)/i);
+      if (addrMatch) { extracted.address = addrMatch[0]; if (!simLead.address) simLead.address = addrMatch[0]; }
+
+      // Job type
+      if (!simLead.job_type) {
+        const job = parseJobType(text);
+        if (job) { extracted.job_type = job.type; simLead.job_type = job.type; }
+      }
+
+      // Urgency
+      if (!simLead.urgency) {
+        if (/asap|urgent|emergency|today|right now|immediately|tomorrow/i.test(lower)) {
+          extracted.urgency = 'ASAP'; simLead.urgency = 'ASAP';
+        } else if (/this week|few days|soon/i.test(lower)) {
+          extracted.urgency = 'This Week'; simLead.urgency = 'This Week';
+        } else if (/next week/i.test(lower)) {
+          extracted.urgency = 'Next Week'; simLead.urgency = 'Next Week';
+        } else if (/flexible|whenever|no rush/i.test(lower)) {
+          extracted.urgency = 'Flexible'; simLead.urgency = 'Flexible';
+        }
+      }
+
+      return extracted;
+    }
+    
+    // Get missing fields
+    function getMissingFields() {
+      const missing = [];
+      if (!simLead.job_type) missing.push('job_type');
+      if (!simLead.urgency) missing.push('urgency');
+      if (!simLead.name) missing.push('name');
+      if (!simLead.zip) missing.push('zip');
+      if (!simLead.phone) missing.push('phone');
+      if (!simLead.email) missing.push('email');
+      if (!simLead.address) missing.push('address');
+      return missing;
+    }
+    
+    // Get next question
+    function getNextQuestion() {
+      const missing = getMissingFields();
+      if (missing.length === 0) return null;
+      
+      const field = missing[0];
+      simState.currentStep = 'collecting_' + field;
+      
+      const questions = {
+        'job_type': "What do you need removed?",
+        'urgency': "How soon do you need this done?",
+        'name': "What's your name?",
+        'zip': "What's the ZIP code for the pickup?",
+        'phone': "What's the best phone number to reach you?",
+        'email': "And your email address?",
+        'address': "What's the pickup address?"
+      };
+      
+      return { field, question: questions[field] || "Can you tell me more?" };
+    }
+    
+    // Random phrases
+    const PHRASES = {
+      thanks: ["Thanks!", "Got it!", "Perfect!", "Great!", "Awesome!"],
+      acknowledge: ["Good question!", "Great question!", "Absolutely!", "Sure thing!"],
+      confirmJob: ["We can definitely help with that!", "No problem, we handle that all the time!", "Absolutely, we can take care of that!"],
+      guideBack: ["To help you further,", "So I can get you a quote,", "To connect you with a pro,"]
+    };
+    
+    function randomPhrase(category) {
+      const options = PHRASES[category] || [""];
+      return options[Math.floor(Math.random() * options.length)];
+    }
+    
+    // Main simulator response function (mirrors chatbot.js processInput)
+    async function simulateBotResponse(userMessage) {
+      await loadTestKnowledge();
+      
+      const lower = userMessage.toLowerCase().trim();
+      const extracted = extractInfo(userMessage);
+      const missing = getMissingFields();
+      
+      console.log('[Sim] Extracted:', extracted, 'Lead:', simLead, 'State:', simState.currentStep);
+      
+      // Handle last name if waiting
+      if (simState.awaitingLastName) {
+        simState.awaitingLastName = false;
+        const lastName = userMessage.trim().split(/\s+/)[0];
+        simLead.name = simLead.first_name + ' ' + lastName;
+        
+        const nextQ = getNextQuestion();
+        if (nextQ) {
+          return { response: `Nice to meet you, ${simLead.name}! 👋 ${nextQ.question}`, source: 'flow', score: 0 };
+        }
+        return { response: `Nice to meet you, ${simLead.name}! 👋 I have all your info!`, source: 'flow', score: 0 };
+      }
+      
+      // Urgency quick replies
+      if (/^(asap|this week|next week|flexible)$/i.test(lower)) {
+        simLead.urgency = userMessage;
+        const nextQ = getNextQuestion();
+        if (nextQ) {
+          return { response: `${randomPhrase('thanks')} We'll prioritize accordingly. ${nextQ.question}`, source: 'flow', score: 0 };
+        }
+        return { response: `${randomPhrase('thanks')} I have everything I need!`, source: 'flow', score: 0 };
+      }
+      
+      // ========== CHECK TRAINING/KB FIRST - BEFORE ANYTHING ELSE ==========
+      // This is the key fix: always check for trained responses FIRST
+      const kbMatch = findKnowledgeResponse(userMessage);
+      if (kbMatch) {
+        console.log('[Sim] Found KB/Training match:', kbMatch.source, 'Score:', kbMatch.score);
+        const nextQ = getNextQuestion();
+        const guideBack = nextQ ? ` ${randomPhrase('guideBack')} ${nextQ.question}` : '';
+        
+        // If it's a trained response, use it directly
+        if (kbMatch.source === 'trained') {
+          return { response: kbMatch.response + guideBack, source: kbMatch.source, score: kbMatch.score };
+        }
+        
+        // For FAQ/KB, add acknowledge phrase if it's a question
+        const questionType = detectQuestion(userMessage);
+        if (questionType) {
+          return { 
+            response: `${randomPhrase('acknowledge')} ${kbMatch.response}${guideBack}`, 
+            source: kbMatch.source, 
+            score: kbMatch.score 
+          };
+        }
+        return { response: kbMatch.response + guideBack, source: kbMatch.source, score: kbMatch.score };
+      }
+      
+      // Check for questions - give generic answers if no KB match
+      const questionType = detectQuestion(userMessage);
+      if (questionType) {
+        let answer = "That's a great question! ";
+        switch(questionType) {
+          case 'pricing': answer += "Pricing depends on volume. Single items run $75-150, full truck $400-600. We provide free quotes!"; break;
+          case 'service_area': answer += "We serve Upstate SC - Greenville, Spartanburg, Anderson, and surrounding areas."; break;
+          case 'services': answer += "We remove furniture, appliances, electronics, yard waste, debris - almost anything non-hazardous!"; break;
+          case 'scheduling': answer += "Yes, same-day service is often available!"; break;
+          case 'process': answer += "We come out, give you a free quote, and if you approve, load everything up right then!"; break;
+          case 'payment': answer += "We accept cash, credit/debit, Venmo, and PayPal. Payment due when job is complete."; break;
+          case 'eco': answer += "We donate usable items and recycle what we can. Landfill only as last resort."; break;
+          default: answer += "Let me get you the details on that.";
+        }
+        
+        const nextQ = getNextQuestion();
+        const guideBack = nextQ ? ` ${randomPhrase('guideBack')} ${nextQ.question}` : '';
+        return { response: answer + guideBack, source: 'generic', score: 0 };
+      }
+      
+      // Handle extracted data (only if no KB match found)
+      if (Object.keys(extracted).length > 0) {
+        if (missing.length === 0) {
+          return { response: `${randomPhrase('thanks')} I have everything I need! A pro will reach out soon. 🎉`, source: 'flow', score: 0 };
+        }
+        
+        if (extracted.job_type) {
+          const nextQ = getNextQuestion();
+          return { response: `${randomPhrase('thanks')} ${randomPhrase('confirmJob')} ${nextQ ? nextQ.question : ''}`, source: 'flow', score: 0 };
+        }
+        
+        const nextQ = getNextQuestion();
+        return { response: `${randomPhrase('thanks')} ${nextQ ? nextQ.question : ''}`, source: 'flow', score: 0 };
+      }
+      
+      // Name handling
+      if (simState.currentStep === 'collecting_name' && !simLead.name) {
+        const nameText = userMessage.trim().replace(/[^\w\s'-]/g, '');
+        
+        if (nameText.includes(' ')) {
+          const parts = nameText.split(/\s+/);
+          simLead.first_name = parts[0];
+          simLead.name = nameText;
+          
+          const nextQ = getNextQuestion();
+          return { response: `Nice to meet you, ${simLead.first_name}! 👋 ${nextQ ? nextQ.question : ''}`, source: 'flow', score: 0 };
+        }
+        
+        if (nameText.length > 1 && nameText.length < 30 && !/\d/.test(nameText)) {
+          simLead.first_name = nameText;
+          simState.awaitingLastName = true;
+          return { response: `Thanks ${nameText}! And your last name?`, source: 'flow', score: 0 };
+        }
+      }
+      
+      // Address handling
+      if (simState.currentStep === 'collecting_address' && !simLead.address) {
+        simLead.address = userMessage.trim();
+        const nextQ = getNextQuestion();
+        if (!nextQ) {
+          return { response: `${randomPhrase('thanks')} I have everything I need! A pro will reach out soon. 🎉`, source: 'flow', score: 0 };
+        }
+        return { response: `${randomPhrase('thanks')} ${nextQ.question}`, source: 'flow', score: 0 };
+      }
+      
+      // Fallback - guide conversation
+      if (simLead.job_type && missing.length > 0) {
+        const nextQ = getNextQuestion();
+        return { response: `I want to make sure I help you properly! ${nextQ ? nextQ.question : 'Tell me more about your needs.'}`, source: 'fallback', score: 0 };
+      }
+      
+      return { response: "I want to make sure I help you properly. Can you tell me more about what you need removed?", source: 'fallback', score: 0 };
+    }
+    
+    async function sendTestMessage() {
+      const input = document.getElementById('testChatInput');
+      const message = input.value.trim();
+      if (!message) return;
+      
+      const chatMessages = document.getElementById('testChatMessages');
+      
+      // Add user message
+      chatMessages.innerHTML += `
+        <div class="flex justify-end">
+          <div class="bg-orange-500 text-white px-4 py-2 rounded-2xl rounded-br-sm max-w-[80%]">${escapeHtml(message)}</div>
+        </div>
+      `;
+      
+      // Show typing indicator
+      chatMessages.innerHTML += `
+        <div class="flex gap-2" id="typingIndicator">
+          <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">🏠</div>
+          <div class="bg-white px-4 py-2 rounded-2xl rounded-bl-sm shadow-sm">
+            <span class="text-slate-400">Thinking...</span>
+          </div>
+        </div>
+      `;
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      input.value = '';
+      
+      // Get bot response (async - pulls from database)
+      const result = await simulateBotResponse(message);
+      
+      // Remove typing indicator
+      const typing = document.getElementById('typingIndicator');
+      if (typing) typing.remove();
+      
+      // Add bot message with source indicator
+      const sourceLabel = result.source === 'faq' ? '📚 FAQ' : 
+                          result.source === 'kb' ? '📖 KB' : 
+                          result.source === 'trained' ? '🎯 Trained' :
+                          result.source === 'flow' ? '🔄 Flow' :
+                          result.source === 'generic' ? '💬 Generic' :
+                          '⚡ Fallback';
+      
+      chatMessages.innerHTML += `
+        <div class="flex gap-2">
+          <div class="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">🏠</div>
+          <div>
+            <div class="bg-white px-4 py-2 rounded-2xl rounded-bl-sm shadow-sm max-w-[280px]">${escapeHtml(result.response)}</div>
+            <div class="text-xs text-slate-400 mt-1 pl-2">${sourceLabel} (score: ${result.score})</div>
+          </div>
+        </div>
+      `;
+      
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // Update lead tracking display
+      updateLeadStatus();
+      
+      // Update rating panel
+      currentTestMessage = message;
+      currentBotResponse = result.response;
+      document.getElementById('rateUserMsg').textContent = message;
+      document.getElementById('rateBotMsg').textContent = result.response;
+      document.getElementById('correctionPanel').classList.add('hidden');
+      
+      input.value = '';
+    }
+    
+    function clearTestChat() {
+      resetSimulator();
+      currentTestMessage = null;
+      currentBotResponse = null;
+      document.getElementById('rateUserMsg').textContent = '-';
+      document.getElementById('rateBotMsg').textContent = '-';
+      document.getElementById('correctionPanel').classList.add('hidden');
+    }
+    
+    function updateLeadStatus() {
+      const fields = ['job_type', 'urgency', 'name', 'zip', 'phone', 'email', 'address'];
+      const labels = ['job', 'urgency', 'name', 'zip', 'phone', 'email', 'address'];
+      
+      const statusParts = fields.map((f, i) => {
+        const val = simLead[f];
+        if (val) {
+          return `<span class="text-green-600 font-semibold">✓ ${labels[i]}</span>`;
+        } else if (simState.currentStep === 'collecting_' + f) {
+          return `<span class="text-orange-500 font-semibold animate-pulse">→ ${labels[i]}</span>`;
+        }
+        return `<span class="text-slate-400">${labels[i]}</span>`;
+      });
+      
+      document.getElementById('simLeadStatus').innerHTML = statusParts.join(' • ');
+    }
+    
+    async function rateResponse(rating) {
+      if (!currentTestMessage || !currentBotResponse) {
+        alert('Send a test message first!');
+        return;
+      }
+      
+      if (rating === 'bad') {
+        // Show correction panel
+        document.getElementById('correctionPanel').classList.remove('hidden');
+        document.getElementById('correctedResponse').focus();
+        return;
+      }
+      
+      // Save good rating
+      try {
+        await supabaseClient.from('chatbot_training').insert({
+          user_message: currentTestMessage,
+          bot_response: currentBotResponse,
+          rating: 'good'
+        });
+        
+        trainingStats.good++;
+        trainingStats.total++;
+        updateTrainingStats();
+        
+        alert('✓ Marked as good response!');
+      } catch (e) {
+        console.error('Error saving rating:', e);
+      }
+    }
+    
+    async function saveCorrection() {
+      if (!currentTestMessage || !currentBotResponse) return;
+      
+      const correctedResponse = document.getElementById('correctedResponse').value.trim();
+      const addToFaq = document.getElementById('addToFaq').checked;
+      const category = document.getElementById('correctionCategory').value;
+      
+      if (!correctedResponse) {
+        alert('Please enter what the bot should have said');
+        return;
+      }
+      
+      try {
+        let faqId = null;
+        
+        // Add to FAQ if checked
+        if (addToFaq) {
+          const { data, error } = await supabaseClient.from('chatbot_faqs').insert({
+            question: currentTestMessage,
+            answer: correctedResponse,
+            category: category,
+            keywords: currentTestMessage.toLowerCase().split(' ').filter(w => w.length > 3),
+            is_active: true,
+            display_order: 999
+          }).select('id').single();
+          
+          if (data) faqId = data.id;
+        }
+        
+        // Save training record
+        await supabaseClient.from('chatbot_training').insert({
+          user_message: currentTestMessage,
+          bot_response: currentBotResponse,
+          rating: 'bad',
+          corrected_response: correctedResponse,
+          added_to_faq: addToFaq,
+          faq_id: faqId
+        });
+        
+        trainingStats.bad++;
+        trainingStats.total++;
+        updateTrainingStats();
+        
+        // Reset
+        document.getElementById('correctedResponse').value = '';
+        document.getElementById('addToFaq').checked = false;
+        document.getElementById('correctionPanel').classList.add('hidden');
+        
+        alert(addToFaq ? '✓ Correction saved and added to FAQ!' : '✓ Correction saved!');
+        
+      } catch (e) {
+        console.error('Error saving correction:', e);
+        alert('Error saving: ' + e.message);
+      }
+    }
+    
+    function updateTrainingStats() {
+      document.getElementById('goodRatings').textContent = trainingStats.good;
+      document.getElementById('badRatings').textContent = trainingStats.bad;
+      document.getElementById('totalRatings').textContent = trainingStats.total;
+    }
+    
+    async function loadTrainingStats() {
+      try {
+        const { data } = await supabaseClient.from('chatbot_training').select('rating');
+        if (data) {
+          trainingStats.good = data.filter(r => r.rating === 'good').length;
+          trainingStats.bad = data.filter(r => r.rating === 'bad').length;
+          trainingStats.total = data.length;
+          updateTrainingStats();
+        }
+      } catch (e) { console.error(e); }
+    }
+    
+    async function loadTrainingLog() {
+      const filter = document.getElementById('trainingFilter').value;
+      let query = supabaseClient.from('chatbot_training').select('*').order('created_at', { ascending: false }).limit(100);
+      
+      if (filter === 'good') query = query.eq('rating', 'good');
+      if (filter === 'bad') query = query.eq('rating', 'bad');
+      if (filter === 'unfixed') query = query.eq('rating', 'bad').is('corrected_response', null);
+      
+      try {
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        const container = document.getElementById('trainingLogList');
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div class="p-8 text-center text-slate-400">No training data yet. Test the bot and rate responses!</div>';
+          return;
+        }
+        
+        container.innerHTML = data.map(t => `
+          <div class="p-4 hover:bg-slate-50">
+            <div class="flex justify-between items-start mb-2">
+              <span class="badge ${t.rating === 'good' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${t.rating}</span>
+              <span class="text-xs text-slate-400">${new Date(t.created_at).toLocaleString()}</span>
+            </div>
+            <div class="mb-2">
+              <span class="text-xs text-slate-500">User:</span>
+              <p class="text-sm text-slate-800">${escapeHtml(t.user_message)}</p>
+            </div>
+            <div class="mb-2">
+              <span class="text-xs text-slate-500">Bot said:</span>
+              <p class="text-sm text-slate-600">${escapeHtml(t.bot_response)}</p>
+            </div>
+            ${t.corrected_response ? `
+              <div class="p-2 bg-green-50 rounded">
+                <span class="text-xs text-green-600">✓ Corrected to:</span>
+                <p class="text-sm text-green-800">${escapeHtml(t.corrected_response)}</p>
+              </div>
+            ` : ''}
+            ${t.added_to_faq ? '<span class="text-xs text-blue-600">📚 Added to FAQ</span>' : ''}
+          </div>
+        `).join('');
+        
+      } catch (e) {
+        console.error('Error loading training log:', e);
+      }
+    }
+    
+    // ========== KNOWLEDGE BASE FUNCTIONS ==========
+    async function loadKnowledgeBase() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('chatbot_knowledge_base')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('knowledgeBaseList');
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div class="p-8 text-center text-slate-400">No knowledge base documents yet. Add some to help the bot!</div>';
+          return;
+        }
+        
+        container.innerHTML = data.map(kb => `
+          <div class="p-4 hover:bg-slate-50 ${!kb.is_active ? 'opacity-50' : ''}">
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
+                  <span class="font-semibold text-slate-800">${escapeHtml(kb.title)}</span>
+                  <span class="badge bg-slate-100 text-slate-600 text-xs">${kb.category}</span>
+                </div>
+                <p class="text-sm text-slate-500 line-clamp-2">${escapeHtml(kb.content.substring(0, 150))}${kb.content.length > 150 ? '...' : ''}</p>
+                <div class="flex gap-2 mt-2">
+                  ${(kb.tags || []).map(t => `<span class="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded">${t}</span>`).join('')}
+                </div>
+              </div>
+              <div class="flex gap-2 ml-4">
+                <button class="btn btn-outline btn-sm" onclick="editKnowledge('${kb.id}')">
+                  <i data-lucide="edit" class="w-4 h-4"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteKnowledge('${kb.id}')">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+        
+        lucide.createIcons();
+      } catch (e) {
+        console.error('Error loading knowledge base:', e);
+      }
+    }
+    
+    async function saveKnowledge() {
+      const title = document.getElementById('kbTitle').value.trim();
+      const content = document.getElementById('kbContent').value.trim();
+      const category = document.getElementById('kbCategory').value;
+      const tagsStr = document.getElementById('kbTags').value;
+      const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+      
+      if (!title || !content) {
+        alert('Title and content are required');
+        return;
+      }
+      
+      try {
+        const { error } = await supabaseClient.from('chatbot_knowledge_base').insert({
+          title,
+          content,
+          category,
+          tags,
+          is_active: true
+        });
+        
+        if (error) throw error;
+        
+        // Clear form
+        document.getElementById('kbTitle').value = '';
+        document.getElementById('kbContent').value = '';
+        document.getElementById('kbTags').value = '';
+        
+        loadKnowledgeBase();
+        alert('✓ Knowledge added successfully!');
+        
+      } catch (e) {
+        console.error('Error saving knowledge:', e);
+        alert('Error: ' + e.message);
+      }
+    }
+    
+    async function deleteKnowledge(id) {
+      if (!confirm('Delete this knowledge base entry?')) return;
+      
+      try {
+        await supabaseClient.from('chatbot_knowledge_base').delete().eq('id', id);
+        loadKnowledgeBase();
+      } catch (e) {
+        console.error('Error deleting:', e);
+      }
+    }
+    
+    function editKnowledge(id) {
+      // TODO: Implement edit modal
+      alert('Edit feature coming soon!');
+    }
+    
+    function searchKnowledge() {
+      const query = document.getElementById('kbSearch').value.toLowerCase();
+      const items = document.querySelectorAll('#knowledgeBaseList > div');
+      items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    }
+    
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        document.getElementById('kbTitle').value = file.name.replace(/\.[^/.]+$/, '');
+        document.getElementById('kbContent').value = content;
+      };
+      reader.readAsText(file);
+    }
+    
+    // Load training stats when Bot Training section is shown
+    const originalShowSectionBT = showSection;
+    showSection = function(sectionId) {
+      originalShowSectionBT(sectionId);
+      if (sectionId === 'botTraining') {
+        loadTrainingStats();
+      }
+    };
+  </script>
+</body>
+</html>

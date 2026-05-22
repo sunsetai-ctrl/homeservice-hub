@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeService Hub - Calendar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #fafaf9; min-height: 100vh; }
+    h1, h2, h3, .font-display { font-family: 'Nunito', sans-serif; }
+    
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: #e7e5e4;
+      border: 1px solid #e7e5e4;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .calendar-header {
+      background: #f5f5f4;
+      padding: 12px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 13px;
+      color: #78716c;
+    }
+    
+    .calendar-day {
+      background: white;
+      min-height: 120px;
+      padding: 8px;
+      vertical-align: top;
+      position: relative;
+    }
+    
+    .calendar-day.other-month {
+      background: #fafaf9;
+      color: #a8a29e;
+    }
+    
+    .calendar-day.today {
+      background: #fff7ed;
+    }
+    
+    .calendar-day:hover {
+      background: #fef3c7;
+      cursor: pointer;
+    }
+    
+    .day-number {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #57534e;
+    }
+    
+    .calendar-day.today .day-number {
+      background: #f97316;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .appointment {
+      font-size: 11px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      transition: all 0.2s;
+    }
+    
+    .appointment:hover {
+      transform: scale(1.02);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .appointment.job { background: #dbeafe; color: #1d4ed8; border-left: 3px solid #3b82f6; }
+    .appointment.follow-up { background: #fef3c7; color: #b45309; border-left: 3px solid #f59e0b; }
+    .appointment.estimate { background: #e9d5ff; color: #7c3aed; border-left: 3px solid #8b5cf6; }
+    .appointment.completed { background: #dcfce7; color: #15803d; border-left: 3px solid #22c55e; }
+    .appointment.cancelled { background: #fee2e2; color: #b91c1c; border-left: 3px solid #ef4444; text-decoration: line-through; }
+    
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; border-radius: 10px; transition: all 0.2s; cursor: pointer; border: none; }
+    .btn-primary { background: #f97316; color: white; padding: 10px 18px; }
+    .btn-primary:hover { background: #ea580c; }
+    .btn-outline { background: white; border: 2px solid #e7e5e4; color: #57534e; padding: 10px 18px; }
+    .btn-outline:hover { border-color: #f97316; color: #f97316; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-bg.open { display: flex; }
+    .modal { background: white; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; overflow: hidden; }
+    .modal-header { padding: 20px; border-bottom: 1px solid #e7e5e4; display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 20px; overflow-y: auto; max-height: 60vh; }
+    .modal-footer { padding: 16px 20px; border-top: 1px solid #e7e5e4; display: flex; justify-content: flex-end; gap: 10px; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-weight: 600; font-size: 13px; color: #57534e; margin-bottom: 6px; }
+    .form-input { width: 100%; padding: 10px 14px; border: 2px solid #e7e5e4; border-radius: 10px; font-size: 14px; }
+    .form-input:focus { outline: none; border-color: #f97316; }
+    
+    .nav-link {
+      display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+      border-radius: 10px; font-weight: 600; color: #78716c; transition: all 0.2s;
+    }
+    .nav-link:hover { background: #fff7ed; color: #f97316; }
+    .nav-link.active { background: #fff7ed; color: #f97316; }
+    
+    .stat-card { background: white; border: 1px solid #e7e5e4; border-radius: 14px; padding: 16px; }
+    
+    .type-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    }
+    .type-job { background: #dbeafe; color: #1d4ed8; }
+    .type-follow-up { background: #fef3c7; color: #b45309; }
+    .type-estimate { background: #e9d5ff; color: #7c3aed; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="bg-white border-b border-stone-200 sticky top-0 z-50">
+    <div class="max-w-full mx-auto px-6 flex justify-between items-center h-16">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-80 transition">
+        <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+          <i data-lucide="home" class="w-5 h-5 text-white"></i>
+        </div>
+        <span class="font-display font-extrabold text-xl text-stone-800 hidden sm:inline">HomeService</span>
+        <span class="font-display font-extrabold text-xl text-orange-500 hidden sm:inline">Hub</span>
+      </a>
+      
+      <!-- Desktop Nav -->
+      <nav class="hidden md:flex items-center gap-2">
+        <a href="pro-dashboard.html" class="nav-link">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+        </a>
+        <a href="index.html" class="nav-link">
+          <i data-lucide="shopping-cart" class="w-4 h-4"></i> Lead Store
+        </a>
+        <a href="crm.html" class="nav-link">
+          <i data-lucide="users" class="w-4 h-4"></i> CRM
+        </a>
+        <a href="calendar.html" class="nav-link active">
+          <i data-lucide="calendar" class="w-4 h-4"></i> Calendar
+        </a>
+      </nav>
+      
+      <div class="hidden md:flex items-center gap-3">
+        <a href="intake.html" class="text-stone-400 hover:text-stone-600 text-sm">Logout</a>
+      </div>
+      
+      <!-- Mobile Hamburger -->
+      <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg hover:bg-orange-50">
+        <i data-lucide="menu" class="w-6 h-6 text-stone-600"></i>
+      </button>
+    </div>
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden md:hidden bg-white border-t border-stone-200 px-6 py-4">
+      <a href="pro-dashboard.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">
+        <i data-lucide="layout-dashboard" class="w-5 h-5 text-orange-500"></i> Dashboard
+      </a>
+      <a href="index.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">
+        <i data-lucide="shopping-cart" class="w-5 h-5 text-orange-500"></i> Lead Store
+      </a>
+      <a href="crm.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">
+        <i data-lucide="users" class="w-5 h-5 text-orange-500"></i> CRM
+      </a>
+      <a href="calendar.html" class="flex items-center gap-3 py-3 text-orange-500 font-semibold">
+        <i data-lucide="calendar" class="w-5 h-5"></i> Calendar
+      </a>
+      <div class="border-t border-stone-200 mt-2 pt-2">
+        <a href="intake.html" class="flex items-center gap-3 py-3 text-stone-500 font-semibold">
+          <i data-lucide="log-out" class="w-5 h-5"></i> Logout
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="p-6 max-w-7xl mx-auto">
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="font-display text-2xl md:text-3xl font-extrabold text-stone-800 mb-1">Calendar</h1>
+        <p class="text-stone-500">Schedule and manage your appointments</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="openEmbedModal()" class="btn btn-outline">
+          <i data-lucide="code" class="w-4 h-4"></i> Embed Booking Widget
+        </button>
+        <button onclick="openAddModal()" class="btn btn-primary">
+          <i data-lucide="plus" class="w-4 h-4"></i> New Appointment
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="calendar-check" class="w-5 h-5 text-blue-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-stone-800" id="statToday">0</div>
+          <div class="text-xs text-stone-500">Today</div>
+        </div>
+      </div>
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-amber-600" id="statWeek">0</div>
+          <div class="text-xs text-stone-500">This Week</div>
+        </div>
+      </div>
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="phone" class="w-5 h-5 text-purple-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-purple-600" id="statFollowUps">0</div>
+          <div class="text-xs text-stone-500">Follow-ups</div>
+        </div>
+      </div>
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-green-600" id="statCompleted">0</div>
+          <div class="text-xs text-stone-500">Completed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Navigation -->
+    <div class="bg-white border border-stone-200 rounded-xl p-4 mb-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <button onclick="prevMonth()" class="btn btn-outline btn-sm">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+          <button onclick="nextMonth()" class="btn btn-outline btn-sm">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <button onclick="goToToday()" class="btn btn-outline btn-sm">Today</button>
+        </div>
+        <h2 class="font-display text-xl font-bold text-stone-800 order-first sm:order-none" id="currentMonth">January 2025</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="type-badge type-job"><i data-lucide="briefcase" class="w-3 h-3"></i> Job</span>
+          <span class="type-badge type-follow-up"><i data-lucide="phone" class="w-3 h-3"></i> Follow-up</span>
+          <span class="type-badge type-estimate"><i data-lucide="file-text" class="w-3 h-3"></i> Estimate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="calendar-grid" id="calendarGrid">
+      <!-- Generated by JS -->
+    </div>
+  </main>
+
+  <!-- Add/Edit Appointment Modal -->
+  <div id="appointmentModal" class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="font-display text-xl font-bold text-stone-800" id="modalTitle">New Appointment</h3>
+        <button onclick="closeModal()" class="p-2 hover:bg-stone-100 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5 text-stone-500"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Title *</label>
+          <input type="text" id="aptTitle" class="form-input" placeholder="e.g., Garage Cleanout">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group">
+            <label class="form-label">Date *</label>
+            <input type="date" id="aptDate" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time</label>
+            <input type="time" id="aptTime" class="form-input" value="09:00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select id="aptType" class="form-input">
+            <option value="job">🔧 Job</option>
+            <option value="follow-up">📞 Follow-up</option>
+            <option value="estimate">📝 Estimate Visit</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Link to Lead (optional)</label>
+          <select id="aptLead" class="form-input">
+            <option value="">-- No Lead --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Customer Name</label>
+          <input type="text" id="aptCustomer" class="form-input" placeholder="Customer name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input type="tel" id="aptPhone" class="form-input" placeholder="(555) 555-5555">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input type="text" id="aptAddress" class="form-input" placeholder="Street address">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" id="aptCity" class="form-input" placeholder="City">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ZIP</label>
+            <input type="text" id="aptZip" class="form-input" placeholder="ZIP">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea id="aptNotes" class="form-input" rows="2" placeholder="Any additional notes..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" id="modalFooter">
+        <button onclick="closeModal()" class="btn btn-outline">Cancel</button>
+        <button onclick="saveAppointment()" class="btn btn-primary">
+          <i data-lucide="save" class="w-4 h-4"></i> Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Appointment Modal -->
+  <div id="viewModal" class="modal-bg" onclick="if(event.target===this)closeViewModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="font-display text-xl font-bold text-stone-800" id="viewTitle">Appointment Details</h3>
+        <button onclick="closeViewModal()" class="p-2 hover:bg-stone-100 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5 text-stone-500"></i>
+        </button>
+      </div>
+      <div class="modal-body" id="viewBody">
+        <!-- Content populated by JS -->
+      </div>
+      <div class="modal-footer" id="viewFooter">
+        <!-- Buttons populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Embed Code Modal -->
+  <div id="embedModal" class="modal-bg" onclick="if(event.target===this)closeEmbedModal()">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="font-display text-xl font-bold text-stone-800">Embed Booking Widget</h3>
+        <button onclick="closeEmbedModal()" class="p-2 hover:bg-stone-100 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5 text-stone-500"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-stone-600 mb-4">Add this booking widget to your website so customers can schedule appointments directly.</p>
+        
+        <div class="mb-6">
+          <h4 class="font-semibold text-stone-800 mb-2 flex items-center gap-2">
+            <i data-lucide="link" class="w-4 h-4 text-orange-500"></i>
+            Direct Link
+          </h4>
+          <p class="text-sm text-stone-500 mb-2">Share this link with customers:</p>
+          <div class="flex gap-2">
+            <input type="text" id="directLink" readonly 
+                   class="form-input flex-1 bg-stone-50 text-sm font-mono" 
+                   value="">
+            <button onclick="copyToClipboard('directLink')" class="btn btn-primary btn-sm">
+              <i data-lucide="copy" class="w-4 h-4"></i> Copy
+            </button>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <h4 class="font-semibold text-stone-800 mb-2 flex items-center gap-2">
+            <i data-lucide="code" class="w-4 h-4 text-orange-500"></i>
+            Embed Code (iframe)
+          </h4>
+          <p class="text-sm text-stone-500 mb-2">Paste this code into your website HTML:</p>
+          <textarea id="embedCode" readonly rows="4"
+                    class="form-input bg-stone-50 text-sm font-mono w-full"></textarea>
+          <button onclick="copyToClipboard('embedCode')" class="btn btn-primary btn-sm mt-2">
+            <i data-lucide="copy" class="w-4 h-4"></i> Copy Embed Code
+          </button>
+        </div>
+        
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <h4 class="font-semibold text-amber-800 mb-1 flex items-center gap-2">
+            <i data-lucide="lightbulb" class="w-4 h-4"></i>
+            Tips
+          </h4>
+          <ul class="text-sm text-amber-700 space-y-1">
+            <li>• Adjust the width and height to fit your page design</li>
+            <li>• The widget works on any website platform (WordPress, Wix, Squarespace, etc.)</li>
+            <li>• All bookings will appear in your calendar automatically</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeEmbedModal()" class="btn btn-outline">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== CONFIG ==========
+    const SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+    
+    // Get company ID from URL param or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const COMPANY_ID = urlParams.get('company') || localStorage.getItem('proCompanyId') || '11111111-1111-1111-1111-111111111111';
+    
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // ========== STATE ==========
+    let currentDate = new Date();
+    let appointments = [];
+    let leads = [];
+    let editingId = null;
+    
+    // ========== INIT ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      loadData();
+    });
+    
+    async function loadData() {
+      await Promise.all([loadAppointments(), loadLeads()]);
+      renderCalendar();
+      updateStats();
+    }
+    
+    async function loadAppointments() {
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+      
+      const { data, error } = await supabaseClient
+        .from('appointments')
+        .select('*')
+        .eq('company_id', COMPANY_ID)
+        .gte('start_time', startOfMonth.toISOString())
+        .lte('start_time', endOfMonth.toISOString())
+        .order('start_time', { ascending: true });
+      
+      if (!error) appointments = data || [];
+    }
+    
+    async function loadLeads() {
+      const { data } = await supabaseClient
+        .from('crm_leads')
+        .select('id, name, phone, address, city, zip')
+        .eq('company_id', COMPANY_ID)
+        .order('created_at', { ascending: false });
+      
+      leads = data || [];
+      populateLeadsDropdown();
+    }
+    
+    function populateLeadsDropdown() {
+      const select = document.getElementById('aptLead');
+      select.innerHTML = '<option value="">-- No Lead --</option>' + 
+        leads.map(l => `<option value="${l.id}">${l.name} - ${l.city || 'No city'}</option>`).join('');
+    }
+    
+    // ========== CALENDAR RENDERING ==========
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      // Update header
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      document.getElementById('currentMonth').textContent = `${monthNames[month]} ${year}`;
+      
+      // Get first day of month and total days
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const daysInPrevMonth = new Date(year, month, 0).getDate();
+      
+      const today = new Date();
+      const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+      
+      let html = '';
+      
+      // Day headers
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      days.forEach(day => {
+        html += `<div class="calendar-header">${day}</div>`;
+      });
+      
+      // Previous month days
+      for (let i = firstDay - 1; i >= 0; i--) {
+        const day = daysInPrevMonth - i;
+        html += `<div class="calendar-day other-month"><div class="day-number">${day}</div></div>`;
+      }
+      
+      // Current month days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = isCurrentMonth && today.getDate() === day;
+        const dayAppointments = appointments.filter(a => a.start_time.startsWith(dateStr));
+        
+        html += `
+          <div class="calendar-day ${isToday ? 'today' : ''}" onclick="openAddModal('${dateStr}')">
+            <div class="day-number">${day}</div>
+            ${dayAppointments.slice(0, 3).map(a => `
+              <div class="appointment ${a.type} ${a.status}" onclick="event.stopPropagation(); viewAppointment('${a.id}')">
+                ${formatTime(a.start_time)} ${a.title}
+              </div>
+            `).join('')}
+            ${dayAppointments.length > 3 ? `<div class="text-xs text-stone-500 mt-1">+${dayAppointments.length - 3} more</div>` : ''}
+          </div>
+        `;
+      }
+      
+      // Next month days
+      const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+      const remainingCells = totalCells - (firstDay + daysInMonth);
+      for (let day = 1; day <= remainingCells; day++) {
+        html += `<div class="calendar-day other-month"><div class="day-number">${day}</div></div>`;
+      }
+      
+      grid.innerHTML = html;
+      lucide.createIcons();
+    }
+    
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+    
+    // ========== NAVIGATION ==========
+    function prevMonth() {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      loadData();
+    }
+    
+    function nextMonth() {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      loadData();
+    }
+    
+    function goToToday() {
+      currentDate = new Date();
+      loadData();
+    }
+    
+    // ========== STATS ==========
+    function updateStats() {
+      const today = new Date().toISOString().split('T')[0];
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      
+      document.getElementById('statToday').textContent = 
+        appointments.filter(a => a.start_time.startsWith(today)).length;
+      
+      document.getElementById('statWeek').textContent = 
+        appointments.filter(a => {
+          const d = new Date(a.start_time);
+          return d >= weekStart && d <= weekEnd;
+        }).length;
+      
+      document.getElementById('statFollowUps').textContent = 
+        appointments.filter(a => a.type === 'follow-up' && a.status !== 'completed').length;
+      
+      document.getElementById('statCompleted').textContent = 
+        appointments.filter(a => a.status === 'completed').length;
+    }
+    
+    // ========== MODALS ==========
+    function openAddModal(dateStr = null) {
+      editingId = null;
+      document.getElementById('modalTitle').textContent = 'New Appointment';
+      document.getElementById('aptTitle').value = '';
+      document.getElementById('aptDate').value = dateStr || new Date().toISOString().split('T')[0];
+      document.getElementById('aptTime').value = '09:00';
+      document.getElementById('aptType').value = 'job';
+      document.getElementById('aptLead').value = '';
+      document.getElementById('aptCustomer').value = '';
+      document.getElementById('aptPhone').value = '';
+      document.getElementById('aptAddress').value = '';
+      document.getElementById('aptCity').value = '';
+      document.getElementById('aptZip').value = '';
+      document.getElementById('aptNotes').value = '';
+      
+      document.getElementById('appointmentModal').classList.add('open');
+      lucide.createIcons();
+    }
+    
+    function closeModal() {
+      document.getElementById('appointmentModal').classList.remove('open');
+      editingId = null;
+    }
+    
+    function closeViewModal() {
+      document.getElementById('viewModal').classList.remove('open');
+    }
+    
+    // Embed Modal
+    function openEmbedModal() { 
+      const baseUrl = window.location.origin;
+      const directLink = `${baseUrl}/book-embed.html?company=${COMPANY_ID}`;
+      const embedCode = `<iframe src="${directLink}" width="100%" height="700" frameborder="0" style="border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);"></iframe>`;
+      
+      document.getElementById('directLink').value = directLink;
+      document.getElementById('embedCode').value = embedCode;
+      document.getElementById('embedModal').classList.add('open'); 
+      lucide.createIcons(); 
+    }
+    function closeEmbedModal() { document.getElementById('embedModal').classList.remove('open'); }
+    
+    function copyToClipboard(elementId) {
+      const el = document.getElementById(elementId);
+      el.select();
+      document.execCommand('copy');
+      alert('✅ Copied to clipboard!');
+    }
+    
+    // Auto-fill when lead is selected
+    document.getElementById('aptLead').addEventListener('change', function() {
+      const lead = leads.find(l => l.id === this.value);
+      if (lead) {
+        document.getElementById('aptCustomer').value = lead.name || '';
+        document.getElementById('aptPhone').value = lead.phone || '';
+        document.getElementById('aptAddress').value = lead.address || '';
+        document.getElementById('aptCity').value = lead.city || '';
+        document.getElementById('aptZip').value = lead.zip || '';
+      }
+    });
+    
+    async function saveAppointment() {
+      const title = document.getElementById('aptTitle').value.trim();
+      const date = document.getElementById('aptDate').value;
+      const time = document.getElementById('aptTime').value;
+      
+      if (!title || !date) {
+        alert('Please enter a title and date');
+        return;
+      }
+      
+      const startTime = new Date(`${date}T${time || '09:00'}`).toISOString();
+      
+      const appointment = {
+        company_id: COMPANY_ID,
+        title,
+        start_time: startTime,
+        type: document.getElementById('aptType').value,
+        lead_id: document.getElementById('aptLead').value || null,
+        customer_name: document.getElementById('aptCustomer').value,
+        customer_phone: document.getElementById('aptPhone').value,
+        address: document.getElementById('aptAddress').value,
+        city: document.getElementById('aptCity').value,
+        zip: document.getElementById('aptZip').value,
+        notes: document.getElementById('aptNotes').value,
+        status: 'scheduled'
+      };
+      
+      try {
+        if (editingId) {
+          const { error } = await supabaseClient.from('appointments').update(appointment).eq('id', editingId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabaseClient.from('appointments').insert([appointment]);
+          if (error) throw error;
+        }
+        
+        closeModal();
+        await loadData();
+        alert('✅ Appointment saved!');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+    
+    async function viewAppointment(id) {
+      const apt = appointments.find(a => a.id === id);
+      if (!apt) return;
+      
+      const typeLabels = { job: '🔧 Job', 'follow-up': '📞 Follow-up', estimate: '📝 Estimate Visit' };
+      const statusColors = { scheduled: 'bg-blue-100 text-blue-700', completed: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-700' };
+      
+      document.getElementById('viewTitle').textContent = apt.title;
+      document.getElementById('viewBody').innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center gap-3">
+            <span class="type-badge type-${apt.type}">${typeLabels[apt.type] || apt.type}</span>
+            <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColors[apt.status] || statusColors.scheduled}">${apt.status.toUpperCase()}</span>
+          </div>
+          
+          <div class="p-4 bg-stone-50 rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="calendar" class="w-4 h-4 text-stone-500"></i>
+              <span class="font-semibold">${new Date(apt.start_time).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i data-lucide="clock" class="w-4 h-4 text-stone-500"></i>
+              <span>${formatTime(apt.start_time)}</span>
+            </div>
+          </div>
+          
+          ${apt.customer_name ? `
+            <div class="p-4 bg-stone-50 rounded-lg">
+              <div class="font-semibold text-stone-800 mb-1">${apt.customer_name}</div>
+              ${apt.customer_phone ? `<div class="text-sm text-stone-600 flex items-center gap-2"><i data-lucide="phone" class="w-3 h-3"></i> ${apt.customer_phone}</div>` : ''}
+              ${apt.address ? `<div class="text-sm text-stone-600 flex items-center gap-2 mt-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${apt.address}, ${apt.city || ''} ${apt.zip || ''}</div>` : ''}
+            </div>
+          ` : ''}
+          
+          ${apt.notes ? `<div class="p-4 bg-amber-50 border border-amber-200 rounded-lg"><p class="text-sm text-amber-800">${apt.notes}</p></div>` : ''}
+        </div>
+      `;
+      
+      document.getElementById('viewFooter').innerHTML = `
+        ${apt.status !== 'completed' ? `<button onclick="markCompleted('${apt.id}')" class="btn btn-outline btn-sm" style="border-color: #22c55e; color: #22c55e;"><i data-lucide="check" class="w-4 h-4"></i> Complete</button>` : ''}
+        ${apt.status !== 'cancelled' ? `<button onclick="cancelAppointment('${apt.id}')" class="btn btn-outline btn-sm" style="border-color: #ef4444; color: #ef4444;"><i data-lucide="x" class="w-4 h-4"></i> Cancel</button>` : ''}
+        <button onclick="editAppointment('${apt.id}')" class="btn btn-outline btn-sm"><i data-lucide="edit" class="w-4 h-4"></i> Edit</button>
+        <button onclick="closeViewModal()" class="btn btn-primary btn-sm">Close</button>
+      `;
+      
+      document.getElementById('viewModal').classList.add('open');
+      lucide.createIcons();
+    }
+    
+    async function markCompleted(id) {
+      try {
+        const { error } = await supabaseClient.from('appointments').update({ status: 'completed' }).eq('id', id);
+        if (error) throw error;
+        closeViewModal();
+        await loadData();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+    
+    async function cancelAppointment(id) {
+      if (!confirm('Are you sure you want to cancel this appointment?')) return;
+      try {
+        const { error } = await supabaseClient.from('appointments').update({ status: 'cancelled' }).eq('id', id);
+        if (error) throw error;
+        closeViewModal();
+        await loadData();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+    
+    function editAppointment(id) {
+      const apt = appointments.find(a => a.id === id);
+      if (!apt) return;
+      
+      closeViewModal();
+      editingId = id;
+      
+      const date = new Date(apt.start_time);
+      document.getElementById('modalTitle').textContent = 'Edit Appointment';
+      document.getElementById('aptTitle').value = apt.title;
+      document.getElementById('aptDate').value = date.toISOString().split('T')[0];
+      document.getElementById('aptTime').value = date.toTimeString().slice(0, 5);
+      document.getElementById('aptType').value = apt.type;
+      document.getElementById('aptLead').value = apt.lead_id || '';
+      document.getElementById('aptCustomer').value = apt.customer_name || '';
+      document.getElementById('aptPhone').value = apt.customer_phone || '';
+      document.getElementById('aptAddress').value = apt.address || '';
+      document.getElementById('aptCity').value = apt.city || '';
+      document.getElementById('aptZip').value = apt.zip || '';
+      document.getElementById('aptNotes').value = apt.notes || '';
+      
+      document.getElementById('appointmentModal').classList.add('open');
+      lucide.createIcons();
+    }
+    
+    function toggleMobileMenu() {
+      document.getElementById('mobileMenu').classList.toggle('hidden');
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

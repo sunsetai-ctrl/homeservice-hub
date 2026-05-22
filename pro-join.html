@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join as a Pro | HomeService Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #ffffff; min-height: 100vh; }
+    h1, h2, h3, .font-display { font-family: 'Nunito', sans-serif; }
+    
+    .landing { 
+      min-height: 100vh;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.98) 30%, #ffffff 100%),
+                  url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center top;
+      background-attachment: fixed;
+    }
+    .landing.hidden { display: none; }
+    
+    .quiz-container { display: none; min-height: 100vh; background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%); }
+    .quiz-container.active { display: block; }
+    
+    .progress-bar { height: 5px; background: #e2e8f0; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #f97316, #fb923c); transition: width 0.4s ease; }
+    
+    .quiz-step { display: none; animation: fadeIn 0.4s ease; }
+    .quiz-step.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .option-card { background: white; border: 2px solid #e2e8f0; border-radius: 16px; padding: 20px 24px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 16px; }
+    .option-card:hover { border-color: #fdba74; background: #fff7ed; }
+    .option-card.selected { border-color: #f97316; background: #fff7ed; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15); }
+    .option-icon { width: 50px; height: 50px; background: #fff7ed; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .option-card.selected .option-icon { background: #f97316; }
+    .option-card.selected .option-icon svg { color: white; }
+    
+    .btn-hero { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; border: none; border-radius: 14px; padding: 18px 36px; font-size: 18px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 6px 20px rgba(249, 115, 22, 0.3); transition: all 0.2s; text-decoration: none; }
+    .btn-hero:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4); }
+    
+    .btn-primary { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; border: none; border-radius: 12px; padding: 16px 32px; font-size: 16px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3); transition: all 0.2s; }
+    .btn-primary:hover { transform: translateY(-2px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    
+    .btn-outline { background: white; color: #f97316; border: 2px solid #f97316; border-radius: 12px; padding: 16px 32px; font-size: 16px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; text-decoration: none; }
+    .btn-outline:hover { background: #fff7ed; }
+    
+    .btn-back { background: transparent; color: #64748b; border: none; padding: 12px 16px; font-size: 15px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; }
+    .btn-back:hover { color: #334155; background: #f1f5f9; }
+    
+    .form-input { width: 100%; padding: 16px 20px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; transition: all 0.2s; }
+    .form-input:focus { outline: none; border-color: #f97316; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1); }
+    
+    .nav-link { color: #57534e; font-weight: 600; font-size: 15px; text-decoration: none; padding: 10px 16px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; }
+    .nav-link:hover { color: #f97316; background: #fff7ed; }
+    
+    .feature-card { background: white; border: 1px solid #e7e5e4; border-radius: 20px; padding: 32px; text-align: center; transition: all 0.3s; }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+    .feature-icon { width: 64px; height: 64px; background: linear-gradient(135deg, #fff7ed, #fed7aa); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+    
+    .compare-card { background: #fafaf9; border-radius: 16px; padding: 24px; }
+    .compare-card.highlight { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px solid #f97316; }
+    
+    .stat-box { background: white; border-radius: 16px; padding: 24px; text-align: center; border: 1px solid #e7e5e4; }
+    
+    .success-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; animation: popIn 0.5s ease; }
+    @keyframes popIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN MODAL -->
+  <div id="loginModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeLoginModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-md p-8" style="animation: modalFadeIn 0.2s ease-out;">
+      <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="home" class="w-7 h-7 text-orange-500"></i>
+        </div>
+        <h2 class="font-display text-2xl font-bold text-stone-800">Pro Portal Login</h2>
+        <p class="text-stone-500 text-sm mt-1">Access your leads, CRM, and calendar</p>
+      </div>
+      <div class="space-y-4">
+        <div><label class="block text-sm font-semibold text-gray-700 mb-2">Email</label><input type="email" id="loginEmail" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition" placeholder="you@company.com"></div>
+        <div><label class="block text-sm font-semibold text-gray-700 mb-2">Password</label><input type="password" id="loginPassword" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition" placeholder="••••••••"></div>
+        <button onclick="handleLogin()" id="loginBtn" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:from-orange-600 hover:to-orange-700 transition flex items-center justify-center gap-2"><i data-lucide="log-in" class="w-5 h-5"></i>Sign In</button>
+        <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center gap-2 text-gray-600 cursor-pointer"><input type="checkbox" class="rounded border-gray-300">Remember me</label>
+          <a href="#" class="text-orange-500 hover:text-orange-600 font-medium">Forgot password?</a>
+        </div>
+      </div>
+      <div class="mt-6 pt-6 border-t border-gray-100 text-center">
+        <p class="text-gray-500 text-sm">Don't have an account?</p>
+        <button onclick="closeLoginModal(); startQuiz();" class="text-orange-500 hover:text-orange-600 font-semibold">Apply to join →</button>
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes modalFadeIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+    #loginModal.hidden { display: none; }
+    #demoModal.hidden { display: none; }
+  </style>
+
+  <!-- DEMO BOOKING MODAL -->
+  <div id="demoModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeDemoModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8" style="animation: modalFadeIn 0.2s ease-out;">
+      <button onclick="closeDemoModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="calendar" class="w-7 h-7 text-orange-500"></i>
+        </div>
+        <h2 class="font-display text-2xl font-bold text-stone-800">Book a Demo</h2>
+        <p class="text-stone-500 text-sm mt-1">See how HomeService Hub can grow your business</p>
+      </div>
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Your Name</label><input type="text" id="demoName" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition" placeholder="John Smith"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Business Name</label><input type="text" id="demoBusiness" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition" placeholder="ABC Junk Removal"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Email</label><input type="email" id="demoEmail" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition" placeholder="john@email.com"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label><input type="tel" id="demoPhone" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition" placeholder="(555) 555-5555"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Preferred Date</label><input type="date" id="demoDate" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Preferred Time</label>
+            <select id="demoTime" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition">
+              <option>9:00 AM</option>
+              <option>10:00 AM</option>
+              <option>11:00 AM</option>
+              <option>12:00 PM</option>
+              <option>1:00 PM</option>
+              <option>2:00 PM</option>
+              <option>3:00 PM</option>
+              <option>4:00 PM</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="bookDemo()" id="demoBtn" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:from-orange-600 hover:to-orange-700 transition flex items-center justify-center gap-2">
+          <i data-lucide="calendar-check" class="w-5 h-5"></i>Schedule Demo
+        </button>
+      </div>
+      <p class="text-center text-gray-400 text-sm mt-4">We'll send you a confirmation email with meeting details</p>
+    </div>
+  </div>
+
+  <!-- LANDING PAGE -->
+  <div class="landing" id="landingSection">
+    
+    <!-- Navigation -->
+    <nav class="flex justify-between items-center px-4 md:px-12 py-4 border-b border-stone-100">
+      <a href="intake.html" class="flex items-center gap-2">
+        <div class="w-10 h-10 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center">
+          <i data-lucide="home" class="w-5 h-5 text-orange-500"></i>
+        </div>
+        <span class="font-display font-extrabold text-lg md:text-xl text-stone-800 hidden sm:inline">HomeService Hub</span>
+      </a>
+      
+      <!-- Always visible nav buttons -->
+      <div class="flex items-center gap-2">
+        <a href="intake.html" class="flex items-center gap-1 px-3 py-2 text-stone-600 hover:text-orange-500 font-semibold text-sm md:text-base rounded-lg hover:bg-orange-50 transition">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span class="hidden xs:inline">Homeowners</span>
+        </a>
+        <a href="login.html" class="flex items-center gap-1 px-3 py-2 bg-orange-500 text-white font-semibold text-sm md:text-base rounded-lg hover:bg-orange-600 transition">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>Pro Login</span>
+        </a>
+      </div>
+    </nav>
+    
+    <!-- Hero -->
+    <section class="px-6 md:px-12 py-16 md:py-24 text-center max-w-5xl mx-auto">
+      <div class="inline-flex items-center gap-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full mb-6">
+        <i data-lucide="trending-up" class="w-4 h-4 text-green-600"></i>
+        <span class="text-green-700 font-semibold text-sm">Pros earn $5,000+ monthly with us</span>
+      </div>
+      <h1 class="font-display text-4xl md:text-5xl lg:text-6xl font-black text-stone-800 leading-tight mb-6">Stop Chasing Leads.<br><span class="text-orange-500">Start Closing Jobs.</span></h1>
+      <p class="text-stone-500 text-lg md:text-xl max-w-2xl mx-auto mb-10">Get connected with homeowners who are ready to hire — right now. No contracts, no monthly fees, just real customers delivered to your phone.</p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+        <button onclick="startQuiz()" class="btn-hero"><i data-lucide="rocket" class="w-5 h-5"></i>Apply to Join<i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+        <button onclick="openDemoModal()" class="btn-outline"><i data-lucide="calendar" class="w-5 h-5"></i>Book a Demo</button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+        <div class="stat-box"><div class="font-display text-3xl font-black text-orange-500">500+</div><div class="text-stone-500 text-sm">Active Pros</div></div>
+        <div class="stat-box"><div class="font-display text-3xl font-black text-orange-500">10K+</div><div class="text-stone-500 text-sm">Leads Delivered</div></div>
+        <div class="stat-box"><div class="font-display text-3xl font-black text-orange-500">85%</div><div class="text-stone-500 text-sm">Contact Rate</div></div>
+        <div class="stat-box"><div class="font-display text-3xl font-black text-orange-500">4.9★</div><div class="text-stone-500 text-sm">Pro Rating</div></div>
+      </div>
+    </section>
+    
+    <!-- How It Works -->
+    <section id="how-it-works" class="px-6 md:px-12 py-16 bg-stone-50">
+      <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-12"><h2 class="font-display text-3xl md:text-4xl font-bold text-stone-800 mb-4">How It Works</h2><p class="text-stone-500 text-lg">Get started in 3 simple steps</p></div>
+        <div class="grid md:grid-cols-3 gap-8">
+          <div class="text-center"><div class="w-16 h-16 bg-orange-500 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div><h3 class="font-display text-xl font-bold text-stone-800 mb-2">Apply & Get Approved</h3><p class="text-stone-500">Complete our quick application. We verify your business and you're ready to go.</p></div>
+          <div class="text-center"><div class="w-16 h-16 bg-orange-500 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div><h3 class="font-display text-xl font-bold text-stone-800 mb-2">Set Your Service Area</h3><p class="text-stone-500">Choose the ZIP codes you serve. Only pay for leads in your area.</p></div>
+          <div class="text-center"><div class="w-16 h-16 bg-orange-500 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div><h3 class="font-display text-xl font-bold text-stone-800 mb-2">Get Leads, Close Jobs</h3><p class="text-stone-500">Receive real-time leads via text & email. Contact customers and win the job.</p></div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Why Different -->
+    <section class="px-6 md:px-12 py-16">
+      <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-12"><h2 class="font-display text-3xl md:text-4xl font-bold text-stone-800 mb-4">Why Pros Choose Us</h2><p class="text-stone-500 text-lg">Not all lead sources are created equal</p></div>
+        <div class="grid md:grid-cols-3 gap-6 mb-12">
+          <div class="feature-card"><div class="feature-icon"><i data-lucide="shield-check" class="w-8 h-8 text-orange-500"></i></div><h3 class="font-display text-xl font-bold text-stone-800 mb-3">Exclusive Leads</h3><p class="text-stone-500">Exclusive leads available. No more competing with 10+ companies.</p></div>
+          <div class="feature-card"><div class="feature-icon"><i data-lucide="phone-call" class="w-8 h-8 text-orange-500"></i></div><h3 class="font-display text-xl font-bold text-stone-800 mb-3">Phone-Verified</h3><p class="text-stone-500">Every lead has a working phone. We verify before you pay.</p></div>
+          <div class="feature-card"><div class="feature-icon"><i data-lucide="credit-card" class="w-8 h-8 text-orange-500"></i></div><h3 class="font-display text-xl font-bold text-stone-800 mb-3">Pay Per Lead</h3><p class="text-stone-500">No monthly fees, no contracts. Only pay for leads you want.</p></div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div class="feature-card"><div class="feature-icon"><i data-lucide="zap" class="w-8 h-8 text-orange-500"></i></div><h3 class="font-display text-xl font-bold text-stone-800 mb-3">Instant Delivery</h3><p class="text-stone-500">Get leads in real-time via SMS and email. Be first to call.</p></div>
+          <div class="feature-card"><div class="feature-icon"><i data-lucide="map-pin" class="w-8 h-8 text-orange-500"></i></div><h3 class="font-display text-xl font-bold text-stone-800 mb-3">Your Service Area</h3><p class="text-stone-500">Only receive leads from ZIP codes you choose.</p></div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Comparison -->
+    <section class="px-6 md:px-12 py-16 bg-stone-50">
+      <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-12"><h2 class="font-display text-3xl md:text-4xl font-bold text-stone-800 mb-4">HomeService Hub vs. Others</h2></div>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="compare-card"><h3 class="font-display text-xl font-bold text-stone-400 mb-4">Other Lead Services</h3><ul class="space-y-3 text-stone-500"><li class="flex items-center gap-3"><i data-lucide="x" class="w-5 h-5 text-red-400"></i>Leads sent to 10+ pros</li><li class="flex items-center gap-3"><i data-lucide="x" class="w-5 h-5 text-red-400"></i>$200-500+ monthly fees</li><li class="flex items-center gap-3"><i data-lucide="x" class="w-5 h-5 text-red-400"></i>Long-term contracts</li><li class="flex items-center gap-3"><i data-lucide="x" class="w-5 h-5 text-red-400"></i>Unverified contact info</li><li class="flex items-center gap-3"><i data-lucide="x" class="w-5 h-5 text-red-400"></i>No bad lead protection</li></ul></div>
+          <div class="compare-card highlight"><h3 class="font-display text-xl font-bold text-orange-600 mb-4">HomeService Hub</h3><ul class="space-y-3 text-stone-700"><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-green-500"></i><strong>Exclusive leads</strong> available</li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-green-500"></i><strong>$0 monthly fees</strong></li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-green-500"></i><strong>No contracts</strong></li><li class="flex items-center gap-3"><i data-lucide="check" class="w-5 h-5 text-green-500"></i><strong>Phone-verified</strong> leads</li></ul></div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Pricing -->
+    <section class="px-6 md:px-12 py-16">
+      <div class="max-w-3xl mx-auto text-center">
+        <h2 class="font-display text-3xl md:text-4xl font-bold text-stone-800 mb-4">Simple, Transparent Pricing</h2>
+        <p class="text-stone-500 text-lg mb-8">Pay only for the leads you want. No surprises.</p>
+        <div class="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-200 rounded-2xl p-8 md:p-12">
+          <div class="text-stone-500 text-lg mb-2">Leads start at just</div>
+          <div class="font-display text-5xl md:text-6xl font-black text-orange-500 mb-4">$22</div>
+          <div class="text-stone-500 mb-6">per lead, based on job type and urgency</div>
+          <ul class="text-left max-w-sm mx-auto space-y-3 text-stone-600 mb-8">
+            <li class="flex items-center gap-3"><i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>No monthly fees</li>
+            <li class="flex items-center gap-3"><i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>No contracts</li>
+            <li class="flex items-center gap-3"><i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>Pause anytime</li>
+          </ul>
+          <button onclick="startQuiz()" class="btn-hero"><i data-lucide="rocket" class="w-5 h-5"></i>Get Started Today</button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- CTA -->
+    <section class="px-6 md:px-12 py-16 bg-stone-800 text-white text-center">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="font-display text-3xl md:text-4xl font-bold mb-4">Ready to Grow Your Business?</h2>
+        <p class="text-stone-300 text-lg mb-8">Join 500+ pros already winning more jobs.</p>
+        <button onclick="startQuiz()" class="btn-hero">Apply Now - It's Free<i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+      </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="px-6 md:px-12 py-8 border-t border-stone-200">
+      <div class="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2"><i data-lucide="home" class="w-5 h-5 text-orange-500"></i><span class="font-display font-bold text-stone-800">HomeService Hub</span></div>
+        <div class="text-stone-400 text-sm">© 2024 HomeService Hub. All rights reserved.</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- QUIZ FUNNEL -->
+  <div class="quiz-container" id="quizContainer">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width: 0%"></div></div>
+    <div class="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
+      <div class="max-w-xl mx-auto flex items-center justify-between">
+        <button onclick="goBack()" class="btn-back" id="backBtn" style="visibility: hidden;"><i data-lucide="arrow-left" class="w-5 h-5"></i> Back</button>
+        <span class="text-sm text-gray-500 font-medium">Step <span id="stepNum">1</span> of 5</span>
+        <button onclick="exitQuiz()" class="btn-back"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+    </div>
+    <div class="max-w-xl mx-auto px-6 py-10">
+      
+      <!-- Step 1 -->
+      <div class="quiz-step active" data-step="1">
+        <div class="text-center mb-8"><h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">What services do you offer?</h2><p class="text-gray-500">Select all that apply</p></div>
+        <div class="space-y-3" id="step1Options">
+          <div class="option-card" onclick="toggleService(this, 'Junk Removal')"><div class="option-icon"><i data-lucide="trash-2" class="w-5 h-5 text-orange-500"></i></div><div class="font-semibold text-gray-900">Junk Removal</div></div>
+          <div class="option-card" onclick="toggleService(this, 'Furniture Removal')"><div class="option-icon"><i data-lucide="sofa" class="w-5 h-5 text-orange-500"></i></div><div class="font-semibold text-gray-900">Furniture Removal</div></div>
+          <div class="option-card" onclick="toggleService(this, 'Appliance Removal')"><div class="option-icon"><i data-lucide="refrigerator" class="w-5 h-5 text-orange-500"></i></div><div class="font-semibold text-gray-900">Appliance Removal</div></div>
+          <div class="option-card" onclick="toggleService(this, 'Yard Debris')"><div class="option-icon"><i data-lucide="trees" class="w-5 h-5 text-orange-500"></i></div><div class="font-semibold text-gray-900">Yard Debris</div></div>
+          <div class="option-card" onclick="toggleService(this, 'Estate Cleanout')"><div class="option-icon"><i data-lucide="home" class="w-5 h-5 text-orange-500"></i></div><div class="font-semibold text-gray-900">Estate Cleanout</div></div>
+          <div class="option-card" onclick="toggleService(this, 'Construction Debris')"><div class="option-icon"><i data-lucide="hard-hat" class="w-5 h-5 text-orange-500"></i></div><div class="font-semibold text-gray-900">Construction Debris</div></div>
+        </div>
+        <button onclick="nextStep()" class="btn-primary w-full mt-6" id="step1Btn" disabled>Continue <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+      </div>
+      
+      <!-- Step 2 -->
+      <div class="quiz-step" data-step="2">
+        <div class="text-center mb-8"><h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">Tell us about your business</h2><p class="text-gray-500">Helps us match you with the right leads</p></div>
+        <div class="space-y-3">
+          <div class="option-card" onclick="selectAndNext(this, 'businessSize', 'solo')"><div class="option-icon"><i data-lucide="user" class="w-5 h-5 text-orange-500"></i></div><div><div class="font-semibold text-gray-900">Solo Operator</div><div class="text-gray-500 text-sm">Just me</div></div></div>
+          <div class="option-card" onclick="selectAndNext(this, 'businessSize', 'small')"><div class="option-icon"><i data-lucide="users" class="w-5 h-5 text-orange-500"></i></div><div><div class="font-semibold text-gray-900">Small Team</div><div class="text-gray-500 text-sm">2-5 employees</div></div></div>
+          <div class="option-card" onclick="selectAndNext(this, 'businessSize', 'medium')"><div class="option-icon"><i data-lucide="building" class="w-5 h-5 text-orange-500"></i></div><div><div class="font-semibold text-gray-900">Growing Company</div><div class="text-gray-500 text-sm">6-20 employees</div></div></div>
+          <div class="option-card" onclick="selectAndNext(this, 'businessSize', 'large')"><div class="option-icon"><i data-lucide="building-2" class="w-5 h-5 text-orange-500"></i></div><div><div class="font-semibold text-gray-900">Established Business</div><div class="text-gray-500 text-sm">20+ employees</div></div></div>
+        </div>
+      </div>
+      
+      <!-- Step 3 -->
+      <div class="quiz-step" data-step="3">
+        <div class="text-center mb-8"><h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">How many leads do you want?</h2><p class="text-gray-500">You can adjust this anytime</p></div>
+        <div class="space-y-3">
+          <div class="option-card" onclick="selectAndNext(this, 'leadVolume', '5-10')"><div class="option-icon"><i data-lucide="mail" class="w-5 h-5 text-orange-500"></i></div><div><div class="font-semibold text-gray-900">5-10 leads/month</div><div class="text-gray-500 text-sm">Just starting</div></div></div>
+          <div class="option-card" onclick="selectAndNext(this, 'leadVolume', '10-25')"><div class="option-icon"><i data-lucide="mails" class="w-5 h-5 text-orange-500"></i></div><div><div class="font-semibold text-gray-900">10-25 leads/month</div><div class="text-gray-500 text-sm">Steady growth</div></div></div>
+          <div class="option-card" onclick="selectAndNext(this, 'leadVolume', '25-50')"><div class="option-icon"><i data-lucide="inbox" class="w-5 h-5 text-orange-500"></i></div><div><div class="font-semibold text-gray-900">25-50 leads/month</div><div class="text-gray-500 text-sm">Scaling up</div></div></div>
+          <div class="option-card" onclick="selectAndNext(this, 'leadVolume', '50+')"><div class="option-icon"><i data-lucide="trending-up" class="w-5 h-5 text-orange-500"></i></div><div><div class="font-semibold text-gray-900">50+ leads/month</div><div class="text-gray-500 text-sm">Maximum volume</div></div></div>
+        </div>
+      </div>
+      
+      <!-- Step 4 -->
+      <div class="quiz-step" data-step="4">
+        <div class="text-center mb-8"><h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">Where do you operate?</h2><p class="text-gray-500">We'll only send leads from your area</p></div>
+        <div class="space-y-4">
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Primary City</label><input type="text" id="inputCity" class="form-input" placeholder="Greenville"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">State</label><input type="text" id="inputState" class="form-input" placeholder="SC"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">ZIP Codes You Serve (comma separated)</label><input type="text" id="inputZips" class="form-input" placeholder="29601, 29605, 29607"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">How far will you travel?</label><select id="inputRadius" class="form-input"><option value="10">Up to 10 miles</option><option value="20" selected>Up to 20 miles</option><option value="30">Up to 30 miles</option><option value="50">Up to 50 miles</option></select></div>
+        </div>
+        <button onclick="goToStep5()" class="btn-primary w-full mt-6">Continue <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+      </div>
+      
+      <!-- Step 5 -->
+      <div class="quiz-step" data-step="5">
+        <div class="text-center mb-8"><h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">Almost done!</h2><p class="text-gray-500">Where should we send your leads?</p></div>
+        <div class="space-y-4">
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Business Name</label><input type="text" id="inputBusiness" class="form-input" placeholder="ABC Junk Removal"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Your Name</label><input type="text" id="inputName" class="form-input" placeholder="John Smith"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label><input type="tel" id="inputPhone" class="form-input" placeholder="(555) 555-5555"></div>
+          <div><label class="block text-sm font-semibold text-gray-700 mb-2">Email</label><input type="email" id="inputEmail" class="form-input" placeholder="john@abcjunk.com"></div>
+        </div>
+        <button onclick="submitApplication()" class="btn-primary w-full mt-6" id="submitBtn"><i data-lucide="check-circle" class="w-5 h-5"></i> Submit Application</button>
+        <p class="text-center text-gray-400 text-sm mt-4"><i data-lucide="lock" class="w-4 h-4 inline"></i> Your info is secure</p>
+      </div>
+      
+      <!-- Step 6 -->
+      <div class="quiz-step" data-step="6">
+        <div class="text-center py-6">
+          <div class="success-icon"><i data-lucide="check" class="w-10 h-10 text-white"></i></div>
+          <h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">Application Received!</h2>
+          <p class="text-gray-500 mb-6">We'll review and get back within 24 hours.</p>
+          <div class="bg-orange-50 border border-orange-200 rounded-xl p-5 text-left max-w-sm mx-auto mb-6">
+            <h4 class="font-semibold text-orange-800 mb-3">What happens next?</h4>
+            <ul class="space-y-2 text-orange-700 text-sm"><li>✓ We verify your business</li><li>✓ Welcome call from our team</li><li>✓ Set up payment method</li><li>✓ Start receiving leads!</li></ul>
+          </div>
+          <a href="intake.html" class="btn-outline"><i data-lucide="arrow-left" class="w-5 h-5"></i> Back to Homepage</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var currentStep = 1;
+    var selectedServices = [];
+    var answers = {};
+    
+    document.addEventListener('DOMContentLoaded', function() { lucide.createIcons(); });
+    
+    function startQuiz() {
+      document.getElementById('landingSection').classList.add('hidden');
+      document.getElementById('quizContainer').classList.add('active');
+      updateProgress();
+      lucide.createIcons();
+    }
+    
+    function exitQuiz() {
+      document.getElementById('landingSection').classList.remove('hidden');
+      document.getElementById('quizContainer').classList.remove('active');
+      currentStep = 1;
+      showStep(1);
+    }
+    
+    function toggleService(card, service) {
+      card.classList.toggle('selected');
+      var index = selectedServices.indexOf(service);
+      if (index > -1) { selectedServices.splice(index, 1); } else { selectedServices.push(service); }
+      document.getElementById('step1Btn').disabled = selectedServices.length === 0;
+    }
+    
+    function selectAndNext(card, key, value) {
+      answers[key] = value;
+      var cards = card.parentElement.querySelectorAll('.option-card');
+      for (var i = 0; i < cards.length; i++) { cards[i].classList.remove('selected'); }
+      card.classList.add('selected');
+      setTimeout(function() { currentStep++; showStep(currentStep); updateProgress(); }, 250);
+    }
+    
+    function nextStep() { currentStep++; showStep(currentStep); updateProgress(); }
+    
+    function goToStep5() {
+      var city = document.getElementById('inputCity').value.trim();
+      var state = document.getElementById('inputState').value.trim();
+      if (!city || !state) { alert('Please enter city and state'); return; }
+      answers.city = city; answers.state = state;
+      answers.zips = document.getElementById('inputZips').value.trim();
+      answers.radius = document.getElementById('inputRadius').value;
+      currentStep = 5; showStep(5); updateProgress();
+    }
+    
+    function goBack() {
+      if (currentStep > 1) { currentStep--; showStep(currentStep); updateProgress(); } else { exitQuiz(); }
+    }
+    
+    function showStep(step) {
+      var steps = document.querySelectorAll('.quiz-step');
+      for (var i = 0; i < steps.length; i++) { steps[i].classList.remove('active'); }
+      var target = document.querySelector('.quiz-step[data-step="' + step + '"]');
+      if (target) { target.classList.add('active'); }
+      document.getElementById('stepNum').textContent = Math.min(step, 5);
+      document.getElementById('backBtn').style.visibility = step > 1 ? 'visible' : 'hidden';
+      lucide.createIcons();
+    }
+    
+    function updateProgress() {
+      var progress = ((currentStep - 1) / 5) * 100;
+      document.getElementById('progressFill').style.width = progress + '%';
+    }
+    
+    function submitApplication() {
+      var business = document.getElementById('inputBusiness').value.trim();
+      var name = document.getElementById('inputName').value.trim();
+      var phone = document.getElementById('inputPhone').value.trim();
+      var email = document.getElementById('inputEmail').value.trim();
+      if (!business || !name || !phone || !email) { alert('Please fill all fields'); return; }
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = true; btn.innerHTML = 'Submitting...';
+      
+      // Save to Supabase
+      var SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+      var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+      var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      
+      supabaseClient.from('pro_applications').insert({
+        business_name: business,
+        contact_name: name,
+        phone: phone,
+        email: email,
+        services: selectedServices,
+        business_size: answers.businessSize,
+        lead_volume: answers.leadVolume,
+        city: answers.city,
+        state: answers.state,
+        zip_codes: answers.zips,
+        service_radius: parseInt(answers.radius) || 20,
+        status: 'pending'
+      }).then(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error.message);
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Submit Application';
+          lucide.createIcons();
+        } else {
+          currentStep = 6;
+          showStep(6);
+          document.querySelector('.progress-bar').style.display = 'none';
+        }
+      });
+    }
+    
+    // ========== LOGIN MODAL ==========
+    function openLoginModal() {
+      document.getElementById('loginModal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      lucide.createIcons();
+    }
+    
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    
+    function handleLogin() {
+      var email = document.getElementById('loginEmail').value.trim();
+      var password = document.getElementById('loginPassword').value.trim();
+      if (!email || !password) { alert('Please enter email and password'); return; }
+      var btn = document.getElementById('loginBtn');
+      btn.innerHTML = 'Signing in...';
+      btn.disabled = true;
+      
+      // Check if it's admin login
+      if (email === 'admin@homeservicehub.com') {
+        window.location.href = 'admin.html';
+        return;
+      }
+      
+      // Check for pro account
+      var SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+      var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+      var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      
+      supabaseClient.from('companies').select('id, name, email').eq('email', email).single().then(function(result) {
+        if (result.data) {
+          // Found pro account - store company ID and redirect
+          localStorage.setItem('proCompanyId', result.data.id);
+          localStorage.setItem('proCompanyName', result.data.name);
+          window.location.href = 'pro-dashboard.html?company=' + result.data.id;
+        } else {
+          alert('Account not found. Please apply to join first.');
+          btn.innerHTML = '<i data-lucide="log-in" class="w-5 h-5"></i>Sign In';
+          btn.disabled = false;
+          lucide.createIcons();
+        }
+      });
+    }
+    
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeLoginModal(); closeDemoModal(); } });
+    
+    // ========== DEMO MODAL ==========
+    function openDemoModal() {
+      document.getElementById('demoModal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      // Set default date to tomorrow
+      var tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById('demoDate').value = tomorrow.toISOString().split('T')[0];
+      lucide.createIcons();
+    }
+    
+    function closeDemoModal() {
+      document.getElementById('demoModal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    
+    function bookDemo() {
+      var name = document.getElementById('demoName').value.trim();
+      var business = document.getElementById('demoBusiness').value.trim();
+      var email = document.getElementById('demoEmail').value.trim();
+      var phone = document.getElementById('demoPhone').value.trim();
+      var date = document.getElementById('demoDate').value;
+      var time = document.getElementById('demoTime').value;
+      
+      if (!name || !email || !phone || !date) {
+        alert('Please fill in all required fields');
+        return;
+      }
+      
+      var btn = document.getElementById('demoBtn');
+      btn.innerHTML = 'Scheduling...';
+      btn.disabled = true;
+      
+      var SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+      var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+      var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      
+      supabaseClient.from('bookings').insert({
+        customer_name: name,
+        customer_phone: phone,
+        customer_email: email,
+        service_type: 'Demo Request',
+        preferred_date: date,
+        preferred_time: time,
+        notes: 'Business: ' + business,
+        status: 'pending',
+        source: 'demo'
+      }).then(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error.message);
+          btn.innerHTML = '<i data-lucide="calendar-check" class="w-5 h-5"></i>Schedule Demo';
+          btn.disabled = false;
+        } else {
+          alert('Demo scheduled! We\'ll send you a confirmation email shortly.');
+          closeDemoModal();
+          btn.innerHTML = '<i data-lucide="calendar-check" class="w-5 h-5"></i>Schedule Demo';
+          btn.disabled = false;
+        }
+        lucide.createIcons();
+      });
+    }
+    
+    // Mobile menu toggle
+    function toggleMobileMenu() {
+      var menu = document.getElementById('mobileMenu');
+      menu.classList.toggle('hidden');
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

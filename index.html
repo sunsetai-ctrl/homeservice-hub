@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lead Store | HomeService Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: #fafaf9; min-height: 100vh; }
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .lead-card { transition: all 0.3s ease; }
+    .lead-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+    .tier-super { box-shadow: 0 0 20px rgba(34,197,94,0.3); }
+    .tier-a { box-shadow: 0 0 15px rgba(234,88,12,0.2); }
+    .buy-btn { transition: all 0.2s ease; }
+    .buy-btn:hover { transform: scale(1.02); }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in-up { animation: fadeInUp 0.4s ease forwards; }
+    .card { background: white; border: 1px solid #e7e5e4; border-radius: 16px; }
+    .nav-link { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 600; color: #78716c; transition: all 0.2s; text-decoration: none; }
+    .nav-link:hover { background: #fff7ed; color: #f97316; }
+    .nav-link.active { background: #fff7ed; color: #f97316; }
+    .filter-select { padding: 8px 12px; border: 1px solid #e7e5e4; border-radius: 8px; font-size: 14px; background: white; }
+    .filter-select:focus { outline: none; border-color: #f97316; }
+    #mobileMenu.hidden { display: none; }
+  </style>
+</head>
+<body class="text-stone-800">
+  <div id="app">
+    <!-- Header -->
+    <header class="bg-white border-b border-stone-200 sticky top-0 z-50">
+      <div class="max-w-full mx-auto px-6 flex justify-between items-center h-16">
+        <a href="index.html" class="flex items-center gap-3 hover:opacity-80 transition">
+          <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <span class="font-display font-bold text-xl text-stone-800 hidden sm:inline">HomeService</span>
+          <span class="font-display font-bold text-xl text-orange-500 hidden sm:inline">Hub</span>
+        </a>
+        <nav class="hidden md:flex items-center gap-2">
+          <a href="pro-dashboard.html" class="nav-link">Dashboard</a>
+          <a href="index.html" class="nav-link active">Lead Store</a>
+          <a href="crm.html" class="nav-link">CRM</a>
+          <a href="calendar.html" class="nav-link">Calendar</a>
+        </nav>
+        <div class="hidden md:flex items-center gap-4">
+          <a href="login.html" class="text-stone-400 hover:text-stone-600 text-sm">Logout</a>
+        </div>
+        <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg hover:bg-orange-50">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="mobileMenu" class="hidden md:hidden bg-white border-t border-stone-200 px-6 py-4">
+        <a href="pro-dashboard.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">Dashboard</a>
+        <a href="index.html" class="flex items-center gap-3 py-3 text-orange-500 font-semibold">Lead Store</a>
+        <a href="crm.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">CRM</a>
+        <a href="calendar.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">Calendar</a>
+        <div class="border-t border-stone-200 mt-2 pt-2">
+          <a href="intake.html" class="flex items-center gap-3 py-3 text-stone-500 font-semibold">Logout</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="mb-6">
+        <h1 class="font-display text-3xl sm:text-4xl font-bold text-stone-800 mb-2">Lead Store</h1>
+        <p class="text-stone-500">Fresh leads ready for your business. Buy exclusive leads and grow.</p>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div class="card p-4"><div class="text-2xl font-display font-bold text-green-600" id="totalLeads">-</div><div class="text-sm text-stone-500">Available</div></div>
+        <div class="card p-4"><div class="text-2xl font-display font-bold text-green-600" id="superLeads">-</div><div class="text-sm text-stone-500">🔥 SUPER</div></div>
+        <div class="card p-4"><div class="text-2xl font-display font-bold text-orange-500" id="aLeads">-</div><div class="text-sm text-stone-500">A-Tier</div></div>
+        <div class="card p-4"><div class="text-2xl font-display font-bold text-stone-700" id="avgPrice">-</div><div class="text-sm text-stone-500">Avg Price</div></div>
+      </div>
+
+      <!-- Sort & Filter Bar -->
+      <div class="card p-4 mb-6">
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-sm font-semibold text-stone-600">Sort:</span>
+            <select id="sortSelect" onchange="applyFilters()" class="filter-select">
+              <option value="tier">By Tier (Best First)</option>
+              <option value="price-high">Price: High → Low</option>
+              <option value="price-low">Price: Low → High</option>
+              <option value="age-new">Lead Age: New → Old</option>
+              <option value="age-old">Lead Age: Old → New</option>
+              <option value="distance">Distance (Nearest)</option>
+            </select>
+            <div id="distanceZipContainer" class="hidden items-center gap-2">
+              <input type="text" id="userZip" placeholder="Your ZIP" maxlength="5" class="w-24 px-3 py-2 border border-stone-200 rounded-lg text-sm" onkeyup="applyFilters()">
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-sm font-semibold text-stone-600">Filter:</span>
+            <select id="tierFilter" onchange="applyFilters()" class="filter-select">
+              <option value="all">All Tiers</option>
+              <option value="SUPER">🔥 SUPER</option>
+              <option value="A">A-Tier</option>
+              <option value="B">B-Tier</option>
+              <option value="C">C-Tier</option>
+              <option value="D">D-Tier</option>
+            </select>
+            <select id="zipFilter" onchange="applyFilters()" class="filter-select"><option value="all">All ZIPs</option></select>
+            <select id="jobTypeFilter" onchange="applyFilters()" class="filter-select"><option value="all">All Jobs</option></select>
+            <select id="urgencyFilter" onchange="applyFilters()" class="filter-select">
+              <option value="all">All Urgency</option>
+              <option value="today">⚡ Today</option>
+              <option value="tomorrow">📅 Tomorrow</option>
+              <option value="this_week">📆 This Week</option>
+              <option value="flexible">🕐 Flexible</option>
+            </select>
+            <button onclick="clearAllFilters()" class="px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50 rounded-lg">✕ Clear All</button>
+          </div>
+          <div id="activeFiltersCount" class="hidden text-sm text-stone-500"></div>
+        </div>
+      </div>
+
+      <div id="loadingState" class="flex flex-col items-center justify-center py-20">
+        <div class="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-4 text-stone-500">Loading leads...</p>
+      </div>
+      <div id="errorState" class="hidden flex flex-col items-center justify-center py-20">
+        <p class="text-red-600 font-medium">Failed to load leads</p>
+        <p class="text-stone-500 text-sm mt-1" id="errorMessage"></p>
+        <button onclick="loadLeads()" class="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg font-semibold">Try Again</button>
+      </div>
+      <div id="leadsGrid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20">
+        <p class="text-stone-700 font-medium">No leads match your filters</p>
+        <button onclick="clearAllFilters()" class="mt-4 px-6 py-2 bg-orange-500 text-white rounded-lg font-semibold">Clear Filters</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Buy Modal -->
+  <div id="buyModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+      <div class="flex justify-between items-start mb-6">
+        <h3 class="font-display text-xl font-bold text-stone-800">Confirm Purchase</h3>
+        <button onclick="closeModal()" class="text-stone-400 hover:text-stone-600 text-2xl">&times;</button>
+      </div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let allLeads = [];
+    const tierStyles = {
+      'SUPER': { badge: 'bg-green-500 text-white', glow: 'tier-super', icon: '🔥', bg: 'bg-gradient-to-br from-green-50 to-white border-l-4 border-l-green-500' },
+      'A': { badge: 'bg-orange-500 text-white', glow: 'tier-a', icon: '⭐', bg: 'bg-gradient-to-br from-orange-50 to-white border-l-4 border-l-orange-500' },
+      'B': { badge: 'bg-yellow-500 text-stone-900', glow: '', icon: '', bg: 'bg-gradient-to-br from-yellow-50 to-white border-l-4 border-l-yellow-500' },
+      'C': { badge: 'bg-cyan-500 text-white', glow: '', icon: '', bg: 'bg-gradient-to-br from-cyan-50 to-white border-l-4 border-l-cyan-500' },
+      'D': { badge: 'bg-gray-400 text-white', glow: '', icon: '', bg: 'bg-gradient-to-br from-gray-50 to-white border-l-4 border-l-gray-400' }
+    };
+
+    async function loadLeads() {
+      showLoading();
+      try {
+        const { data, error } = await supabaseClient.from('marketplace_leads').select('*').eq('available', true).order('created_at', { ascending: false });
+        if (error) throw error;
+        allLeads = data || [];
+        populateFilterDropdowns();
+        updateStats();
+        applyFilters();
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+
+    function populateFilterDropdowns() {
+      const zips = [...new Set(allLeads.map(l => l.zip).filter(Boolean))].sort();
+      document.getElementById('zipFilter').innerHTML = '<option value="all">All ZIPs</option>' + zips.map(z => '<option value="'+z+'">'+z+'</option>').join('');
+      const jobs = [...new Set(allLeads.map(l => l.job_type).filter(Boolean))].sort();
+      document.getElementById('jobTypeFilter').innerHTML = '<option value="all">All Jobs</option>' + jobs.map(j => '<option value="'+j+'">'+j+'</option>').join('');
+    }
+
+    function applyFilters() {
+      const sortValue = document.getElementById('sortSelect').value;
+      const tierFilter = document.getElementById('tierFilter').value;
+      const zipFilter = document.getElementById('zipFilter').value;
+      const jobTypeFilter = document.getElementById('jobTypeFilter').value;
+      const urgencyFilter = document.getElementById('urgencyFilter').value;
+      
+      const distanceContainer = document.getElementById('distanceZipContainer');
+      if (sortValue === 'distance') { distanceContainer.classList.remove('hidden'); distanceContainer.classList.add('flex'); }
+      else { distanceContainer.classList.add('hidden'); distanceContainer.classList.remove('flex'); }
+      
+      let filtered = [...allLeads];
+      if (tierFilter !== 'all') filtered = filtered.filter(l => l.tier === tierFilter);
+      if (zipFilter !== 'all') filtered = filtered.filter(l => l.zip === zipFilter);
+      if (jobTypeFilter !== 'all') filtered = filtered.filter(l => l.job_type === jobTypeFilter);
+      if (urgencyFilter !== 'all') filtered = filtered.filter(l => l.urgency === urgencyFilter);
+      
+      const tierOrder = ['SUPER', 'A', 'B', 'C', 'D'];
+      switch (sortValue) {
+        case 'tier': filtered.sort((a, b) => tierOrder.indexOf(a.tier || 'D') - tierOrder.indexOf(b.tier || 'D')); break;
+        case 'price-high': filtered.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0)); break;
+        case 'price-low': filtered.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0)); break;
+        case 'age-new': filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
+        case 'age-old': filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)); break;
+        case 'distance':
+          const userZip = document.getElementById('userZip').value;
+          if (userZip && userZip.length === 5) {
+            filtered.sort((a, b) => Math.abs(parseInt(a.zip || '99999') - parseInt(userZip)) - Math.abs(parseInt(b.zip || '99999') - parseInt(userZip)));
+          }
+          break;
+      }
+      
+      const activeCount = [tierFilter, zipFilter, jobTypeFilter, urgencyFilter].filter(f => f !== 'all').length;
+      const countEl = document.getElementById('activeFiltersCount');
+      if (activeCount > 0) { countEl.textContent = activeCount + ' filter(s) • ' + filtered.length + ' leads'; countEl.classList.remove('hidden'); }
+      else { countEl.classList.add('hidden'); }
+      
+      renderLeads(filtered);
+    }
+
+    function clearAllFilters() {
+      document.getElementById('sortSelect').value = 'tier';
+      document.getElementById('tierFilter').value = 'all';
+      document.getElementById('zipFilter').value = 'all';
+      document.getElementById('jobTypeFilter').value = 'all';
+      document.getElementById('urgencyFilter').value = 'all';
+      document.getElementById('userZip').value = '';
+      document.getElementById('distanceZipContainer').classList.add('hidden');
+      applyFilters();
+    }
+
+    function renderLeads(leads) {
+      const grid = document.getElementById('leadsGrid');
+      if (leads.length === 0) { showEmpty(); return; }
+      
+      grid.innerHTML = leads.map((lead, i) => {
+        const tier = lead.tier || 'A';
+        const style = tierStyles[tier] || tierStyles['A'];
+        const price = lead.price ? '$' + parseFloat(lead.price).toFixed(2) : '$45.00';
+        const priceColor = tier === 'SUPER' ? 'text-green-600' : 'text-stone-800';
+        const urgencyMap = { today: 'Today', tomorrow: 'Tomorrow', this_week: 'This Week', flexible: 'Flexible' };
+        
+        return '<div class="lead-card '+style.bg+' '+style.glow+' rounded-xl border border-stone-200 overflow-hidden fade-in-up shadow-sm" style="animation-delay: '+(i*0.05)+'s">' +
+          '<div class="p-5">' +
+            '<div class="flex justify-between items-start mb-4">' +
+              '<span class="px-3 py-1 rounded-full text-xs font-bold '+style.badge+'">' + style.icon + ' ' + tier + (tier === 'SUPER' ? '' : '-TIER') + '</span>' +
+              '<span class="font-display text-2xl font-bold '+priceColor+'">' + price + '</span>' +
+            '</div>' +
+            '<div class="flex items-center gap-2 text-stone-700 font-semibold text-lg mb-2">📍 ' + (lead.city || 'Unknown') + ', ' + (lead.zip || '') + '</div>' +
+            (lead.job_type ? '<div class="text-orange-600 font-bold text-sm mb-3">' + lead.job_type + '</div>' : '') +
+            '<div class="flex flex-wrap gap-2 mb-4">' +
+              (lead.urgency ? '<span class="px-3 py-1 bg-stone-100 rounded-full text-sm font-medium text-stone-700">⏰ ' + (urgencyMap[lead.urgency] || lead.urgency) + '</span>' : '') +
+            '</div>' +
+            '<button onclick="openBuyModal(\''+lead.id+'\', \''+(lead.city || 'Lead')+'\', \''+price+'\', \''+tier+'\')" class="buy-btn w-full py-3 rounded-xl font-bold text-sm '+(tier === 'SUPER' ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white')+'">Buy This Lead</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      showGrid();
+    }
+
+    function updateStats() {
+      document.getElementById('totalLeads').textContent = allLeads.length;
+      document.getElementById('superLeads').textContent = allLeads.filter(l => l.tier === 'SUPER').length;
+      document.getElementById('aLeads').textContent = allLeads.filter(l => l.tier === 'A').length;
+      const prices = allLeads.map(l => parseFloat(l.price) || 45).filter(p => !isNaN(p));
+      document.getElementById('avgPrice').textContent = '$' + (prices.length ? (prices.reduce((a,b) => a+b, 0) / prices.length).toFixed(2) : '0.00');
+    }
+
+    function showLoading() { document.getElementById('loadingState').classList.remove('hidden'); document.getElementById('errorState').classList.add('hidden'); document.getElementById('leadsGrid').classList.add('hidden'); document.getElementById('emptyState').classList.add('hidden'); }
+    function showError(msg) { document.getElementById('loadingState').classList.add('hidden'); document.getElementById('errorState').classList.remove('hidden'); document.getElementById('leadsGrid').classList.add('hidden'); document.getElementById('emptyState').classList.add('hidden'); document.getElementById('errorMessage').textContent = msg; }
+    function showGrid() { document.getElementById('loadingState').classList.add('hidden'); document.getElementById('errorState').classList.add('hidden'); document.getElementById('leadsGrid').classList.remove('hidden'); document.getElementById('emptyState').classList.add('hidden'); }
+    function showEmpty() { document.getElementById('loadingState').classList.add('hidden'); document.getElementById('errorState').classList.add('hidden'); document.getElementById('leadsGrid').classList.add('hidden'); document.getElementById('emptyState').classList.remove('hidden'); }
+
+    function openBuyModal(id, location, price, tier) {
+      const style = tierStyles[tier] || tierStyles['A'];
+      document.getElementById('modalContent').innerHTML = 
+        '<div class="text-center mb-6"><span class="inline-block px-4 py-2 rounded-full text-sm font-bold '+style.badge+' mb-4">'+style.icon+' '+tier+(tier === 'SUPER' ? '' : '-TIER')+' LEAD</span><h4 class="font-display text-2xl font-bold text-stone-800">Lead in '+location+'</h4></div>' +
+        '<div class="bg-stone-100 rounded-xl p-4 mb-6"><div class="flex justify-between items-center"><span class="text-stone-500">Lead Price</span><span class="font-display text-2xl font-bold text-stone-800">'+price+'</span></div></div>' +
+        '<div class="space-y-3"><button onclick="buyLead(\''+id+'\')" class="w-full py-4 rounded-xl font-bold bg-gradient-to-r from-green-500 to-green-600 text-white">Confirm Purchase</button><button onclick="closeModal()" class="w-full py-3 rounded-xl font-medium text-stone-500 hover:text-stone-800">Cancel</button></div>';
+      document.getElementById('buyModal').classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('buyModal').classList.add('hidden'); }
+
+    async function buyLead(id) {
+      try {
+        const companyId = localStorage.getItem('proCompanyId') || '11111111-1111-1111-1111-111111111111';
+        const lead = allLeads.find(l => l.id === id);
+        if (!lead) { alert('Lead not found'); return; }
+        const { error: crmError } = await supabaseClient.from('crm_leads').insert({ company_id: companyId, marketplace_lead_id: lead.id, name: lead.name, phone: lead.phone, email: lead.email, address: lead.address, city: lead.city, state: lead.state, zip: lead.zip, service_details: lead.service_details, job_type: lead.job_type, urgency: lead.urgency, tier: lead.tier, price_paid: lead.price, status: 'new' });
+        if (crmError) throw crmError;
+        const { error: updateError } = await supabaseClient.from('marketplace_leads').update({ available: false }).eq('id', id);
+        if (updateError) throw updateError;
+        alert('✅ Lead purchased! Added to your CRM.');
+        closeModal();
+        loadLeads();
+      } catch (error) { alert('Error: ' + error.message); }
+    }
+
+    document.getElementById('buyModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+    function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('hidden'); }
+    loadLeads();
+  </script>
+</body>
+</html>

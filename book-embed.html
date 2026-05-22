@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book an Appointment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: transparent;
+      padding: 0;
+    }
+    h1, h2, h3, .font-display { font-family: 'Nunito', sans-serif; }
+    
+    .booking-card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .booking-header {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .booking-body {
+      padding: 30px;
+    }
+    
+    .step { display: none; }
+    .step.active { display: block; }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-label { 
+      display: block; 
+      font-weight: 600; 
+      font-size: 14px; 
+      color: #57534e; 
+      margin-bottom: 8px; 
+    }
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e7e5e4;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+    
+    .service-option {
+      border: 2px solid #e7e5e4;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .service-option:hover {
+      border-color: #fed7aa;
+      background: #fff7ed;
+    }
+    .service-option.selected {
+      border-color: #f97316;
+      background: #fff7ed;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+    .service-option .icon {
+      width: 44px;
+      height: 44px;
+      background: #f5f5f4;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .service-option.selected .icon {
+      background: #f97316;
+      color: white;
+    }
+    
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .time-slot {
+      padding: 12px;
+      border: 2px solid #e7e5e4;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .time-slot:hover {
+      border-color: #fed7aa;
+      background: #fff7ed;
+    }
+    .time-slot.selected {
+      border-color: #f97316;
+      background: #f97316;
+      color: white;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 700;
+      border-radius: 12px;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+      padding: 14px 24px;
+      font-size: 16px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+    }
+    .btn-outline {
+      background: white;
+      border: 2px solid #e7e5e4;
+      color: #57534e;
+    }
+    .btn-outline:hover {
+      border-color: #f97316;
+      color: #f97316;
+    }
+    
+    .progress-bar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .progress-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #e7e5e4;
+      transition: all 0.3s;
+    }
+    .progress-dot.active {
+      background: #f97316;
+      transform: scale(1.2);
+    }
+    .progress-dot.completed {
+      background: #22c55e;
+    }
+    
+    .success-animation {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      animation: pop 0.5s ease;
+    }
+    @keyframes pop {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #f5f5f4;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-label { color: #78716c; font-size: 14px; }
+    .summary-value { font-weight: 600; color: #1c1917; }
+  </style>
+</head>
+<body>
+  <div class="booking-card">
+    <!-- Header -->
+    <div class="booking-header">
+      <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="calendar-check" class="w-8 h-8"></i>
+      </div>
+      <h1 class="font-display text-2xl font-extrabold mb-2">Book an Appointment</h1>
+      <p class="text-white/80">Quick & easy scheduling in under 2 minutes</p>
+    </div>
+    
+    <!-- Body -->
+    <div class="booking-body">
+      <!-- Progress -->
+      <div class="progress-bar">
+        <div class="progress-dot active" data-step="1"></div>
+        <div class="progress-dot" data-step="2"></div>
+        <div class="progress-dot" data-step="3"></div>
+        <div class="progress-dot" data-step="4"></div>
+      </div>
+      
+      <!-- Step 1: Service Selection -->
+      <div class="step active" data-step="1">
+        <h2 class="font-display text-xl font-bold text-stone-800 mb-4">What do you need help with?</h2>
+        
+        <div id="serviceOptions">
+          <div class="service-option" data-service="Junk Removal">
+            <div class="icon"><i data-lucide="trash-2" class="w-5 h-5 text-stone-500"></i></div>
+            <div>
+              <div class="font-semibold text-stone-800">Junk Removal</div>
+              <div class="text-sm text-stone-500">General junk & debris hauling</div>
+            </div>
+          </div>
+          <div class="service-option" data-service="Furniture Removal">
+            <div class="icon"><i data-lucide="sofa" class="w-5 h-5 text-stone-500"></i></div>
+            <div>
+              <div class="font-semibold text-stone-800">Furniture Removal</div>
+              <div class="text-sm text-stone-500">Couches, beds, tables, chairs</div>
+            </div>
+          </div>
+          <div class="service-option" data-service="Appliance Removal">
+            <div class="icon"><i data-lucide="refrigerator" class="w-5 h-5 text-stone-500"></i></div>
+            <div>
+              <div class="font-semibold text-stone-800">Appliance Removal</div>
+              <div class="text-sm text-stone-500">Fridges, washers, dryers, AC units</div>
+            </div>
+          </div>
+          <div class="service-option" data-service="Yard Debris">
+            <div class="icon"><i data-lucide="trees" class="w-5 h-5 text-stone-500"></i></div>
+            <div>
+              <div class="font-semibold text-stone-800">Yard Debris</div>
+              <div class="text-sm text-stone-500">Branches, leaves, landscaping waste</div>
+            </div>
+          </div>
+          <div class="service-option" data-service="Estate Cleanout">
+            <div class="icon"><i data-lucide="home" class="w-5 h-5 text-stone-500"></i></div>
+            <div>
+              <div class="font-semibold text-stone-800">Estate Cleanout</div>
+              <div class="text-sm text-stone-500">Full house or property cleanout</div>
+            </div>
+          </div>
+          <div class="service-option" data-service="Construction Debris">
+            <div class="icon"><i data-lucide="hard-hat" class="w-5 h-5 text-stone-500"></i></div>
+            <div>
+              <div class="font-semibold text-stone-800">Construction Debris</div>
+              <div class="text-sm text-stone-500">Renovation & remodel waste</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6">
+          <button onclick="nextStep()" class="btn btn-primary w-full" id="step1Next" disabled>
+            Continue <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Step 2: Date & Time -->
+      <div class="step" data-step="2">
+        <h2 class="font-display text-xl font-bold text-stone-800 mb-4">When works best for you?</h2>
+        
+        <div class="form-group">
+          <label class="form-label">Preferred Date</label>
+          <input type="date" id="bookingDate" class="form-input" min="">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Preferred Time</label>
+          <div class="time-slots" id="timeSlots">
+            <div class="time-slot" data-time="8:00 AM">8:00 AM</div>
+            <div class="time-slot" data-time="9:00 AM">9:00 AM</div>
+            <div class="time-slot" data-time="10:00 AM">10:00 AM</div>
+            <div class="time-slot" data-time="11:00 AM">11:00 AM</div>
+            <div class="time-slot" data-time="12:00 PM">12:00 PM</div>
+            <div class="time-slot" data-time="1:00 PM">1:00 PM</div>
+            <div class="time-slot" data-time="2:00 PM">2:00 PM</div>
+            <div class="time-slot" data-time="3:00 PM">3:00 PM</div>
+            <div class="time-slot" data-time="4:00 PM">4:00 PM</div>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button onclick="prevStep()" class="btn btn-outline flex-1">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
+          </button>
+          <button onclick="nextStep()" class="btn btn-primary flex-1" id="step2Next" disabled>
+            Continue <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Step 3: Contact Info -->
+      <div class="step" data-step="3">
+        <h2 class="font-display text-xl font-bold text-stone-800 mb-4">Your Information</h2>
+        
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" id="customerName" class="form-input" placeholder="John Smith">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Phone Number *</label>
+          <input type="tel" id="customerPhone" class="form-input" placeholder="(555) 555-5555">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="customerEmail" class="form-input" placeholder="john@email.com">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Service Address *</label>
+          <input type="text" id="customerAddress" class="form-input" placeholder="123 Main Street">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group">
+            <label class="form-label">City *</label>
+            <input type="text" id="customerCity" class="form-input" placeholder="Greenville">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ZIP *</label>
+            <input type="text" id="customerZip" class="form-input" placeholder="29601" maxlength="5">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Additional Notes</label>
+          <textarea id="customerNotes" class="form-input" rows="2" placeholder="Any special instructions or details..."></textarea>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button onclick="prevStep()" class="btn btn-outline flex-1">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
+          </button>
+          <button onclick="nextStep()" class="btn btn-primary flex-1" id="step3Next">
+            Review <i data-lucide="arrow-right" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Step 4: Confirmation -->
+      <div class="step" data-step="4">
+        <h2 class="font-display text-xl font-bold text-stone-800 mb-4">Review Your Booking</h2>
+        
+        <div class="bg-stone-50 rounded-xl p-4 mb-6">
+          <div class="summary-row">
+            <span class="summary-label">Service</span>
+            <span class="summary-value" id="summaryService">-</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Date</span>
+            <span class="summary-value" id="summaryDate">-</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Time</span>
+            <span class="summary-value" id="summaryTime">-</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Name</span>
+            <span class="summary-value" id="summaryName">-</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Phone</span>
+            <span class="summary-value" id="summaryPhone">-</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Address</span>
+            <span class="summary-value" id="summaryAddress">-</span>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <button onclick="prevStep()" class="btn btn-outline flex-1">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
+          </button>
+          <button onclick="submitBooking()" class="btn btn-primary flex-1" id="submitBtn">
+            <i data-lucide="check" class="w-5 h-5"></i> Confirm Booking
+          </button>
+        </div>
+      </div>
+      
+      <!-- Success -->
+      <div class="step" data-step="5">
+        <div class="success-animation">
+          <div class="success-icon">
+            <i data-lucide="check" class="w-10 h-10 text-white"></i>
+          </div>
+          <h2 class="font-display text-2xl font-bold text-stone-800 mb-2">Booking Confirmed!</h2>
+          <p class="text-stone-500 mb-6">We'll contact you shortly to confirm your appointment.</p>
+          
+          <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-left mb-6">
+            <div class="flex items-center gap-2 text-green-700 font-semibold mb-2">
+              <i data-lucide="calendar" class="w-5 h-5"></i>
+              <span id="confirmDate">-</span>
+            </div>
+            <div class="flex items-center gap-2 text-green-700">
+              <i data-lucide="clock" class="w-5 h-5"></i>
+              <span id="confirmTime">-</span>
+            </div>
+          </div>
+          
+          <p class="text-sm text-stone-400">Confirmation #: <span id="confirmationId" class="font-mono">-</span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // ========== CONFIG ==========
+    const SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+    
+    // Get company ID from URL params or use default
+    const urlParams = new URLSearchParams(window.location.search);
+    const COMPANY_ID = urlParams.get('company') || '11111111-1111-1111-1111-111111111111';
+    
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // ========== STATE ==========
+    let currentStep = 1;
+    let booking = {
+      service: '',
+      date: '',
+      time: '',
+      name: '',
+      phone: '',
+      email: '',
+      address: '',
+      city: '',
+      zip: '',
+      notes: ''
+    };
+    
+    // ========== INIT ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      
+      // Set min date to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('bookingDate').min = today;
+      document.getElementById('bookingDate').value = today;
+      
+      // Service selection
+      document.querySelectorAll('.service-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          document.querySelectorAll('.service-option').forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          booking.service = opt.dataset.service;
+          document.getElementById('step1Next').disabled = false;
+          
+          // Update icon color
+          document.querySelectorAll('.service-option .icon').forEach(icon => {
+            icon.querySelector('i').classList.remove('text-white');
+            icon.querySelector('i').classList.add('text-stone-500');
+          });
+          opt.querySelector('.icon i').classList.remove('text-stone-500');
+          opt.querySelector('.icon i').classList.add('text-white');
+        });
+      });
+      
+      // Time slot selection
+      document.querySelectorAll('.time-slot').forEach(slot => {
+        slot.addEventListener('click', () => {
+          document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+          slot.classList.add('selected');
+          booking.time = slot.dataset.time;
+          checkStep2();
+        });
+      });
+      
+      // Date change
+      document.getElementById('bookingDate').addEventListener('change', (e) => {
+        booking.date = e.target.value;
+        checkStep2();
+      });
+    });
+    
+    function checkStep2() {
+      const hasDate = document.getElementById('bookingDate').value;
+      const hasTime = booking.time;
+      document.getElementById('step2Next').disabled = !(hasDate && hasTime);
+    }
+    
+    // ========== NAVIGATION ==========
+    function showStep(step) {
+      currentStep = step;
+      
+      // Hide all steps
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      
+      // Show current step
+      document.querySelector(`.step[data-step="${step}"]`).classList.add('active');
+      
+      // Update progress dots
+      document.querySelectorAll('.progress-dot').forEach(dot => {
+        const dotStep = parseInt(dot.dataset.step);
+        dot.classList.remove('active', 'completed');
+        if (dotStep === step) dot.classList.add('active');
+        if (dotStep < step) dot.classList.add('completed');
+      });
+      
+      lucide.createIcons();
+    }
+    
+    function nextStep() {
+      if (currentStep === 3) {
+        // Validate step 3
+        const name = document.getElementById('customerName').value.trim();
+        const phone = document.getElementById('customerPhone').value.trim();
+        const address = document.getElementById('customerAddress').value.trim();
+        const city = document.getElementById('customerCity').value.trim();
+        const zip = document.getElementById('customerZip').value.trim();
+        
+        if (!name || !phone || !address || !city || !zip) {
+          alert('Please fill in all required fields');
+          return;
+        }
+        
+        // Save to booking object
+        booking.name = name;
+        booking.phone = phone;
+        booking.email = document.getElementById('customerEmail').value.trim();
+        booking.address = address;
+        booking.city = city;
+        booking.zip = zip;
+        booking.notes = document.getElementById('customerNotes').value.trim();
+        booking.date = document.getElementById('bookingDate').value;
+        
+        // Update summary
+        document.getElementById('summaryService').textContent = booking.service;
+        document.getElementById('summaryDate').textContent = new Date(booking.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        document.getElementById('summaryTime').textContent = booking.time;
+        document.getElementById('summaryName').textContent = booking.name;
+        document.getElementById('summaryPhone').textContent = booking.phone;
+        document.getElementById('summaryAddress').textContent = `${booking.address}, ${booking.city} ${booking.zip}`;
+      }
+      
+      showStep(currentStep + 1);
+    }
+    
+    function prevStep() {
+      showStep(currentStep - 1);
+    }
+    
+    // ========== SUBMIT ==========
+    async function submitBooking() {
+      const btn = document.getElementById('submitBtn');
+      btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Submitting...';
+      btn.disabled = true;
+      lucide.createIcons();
+      
+      try {
+        const { data, error } = await supabaseClient
+          .from('bookings')
+          .insert([{
+            company_id: COMPANY_ID,
+            customer_name: booking.name,
+            customer_phone: booking.phone,
+            customer_email: booking.email || null,
+            address: booking.address,
+            city: booking.city,
+            zip: booking.zip,
+            service_type: booking.service,
+            preferred_date: booking.date,
+            preferred_time: booking.time,
+            notes: booking.notes || null,
+            status: 'pending',
+            source: 'embed'
+          }])
+          .select();
+        
+        if (error) throw error;
+        
+        // Show success
+        document.getElementById('confirmDate').textContent = new Date(booking.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        document.getElementById('confirmTime').textContent = booking.time;
+        document.getElementById('confirmationId').textContent = data[0].id.slice(0, 8).toUpperCase();
+        
+        showStep(5);
+        
+      } catch (err) {
+        alert('Error submitting booking: ' + err.message);
+        btn.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i> Confirm Booking';
+        btn.disabled = false;
+        lucide.createIcons();
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pro Dashboard | HomeService Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; min-height: 100vh; }
+    h1, h2, h3, .font-display { font-family: 'Nunito', sans-serif; }
+    
+    /* Sidebar styles */
+    .sidebar { 
+      width: 260px; 
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); 
+      min-height: 100vh; 
+      position: fixed; 
+      left: 0; 
+      top: 0; 
+      transition: transform 0.3s ease;
+      z-index: 50;
+    }
+    .sidebar.collapsed { transform: translateX(-252px); }
+    .sidebar-toggle {
+      position: fixed;
+      left: 260px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 48px;
+      background: #1e293b;
+      border: none;
+      border-radius: 0 8px 8px 0;
+      cursor: pointer;
+      z-index: 51;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: left 0.3s ease;
+    }
+    .sidebar-toggle.collapsed { left: 8px; }
+    .sidebar-toggle svg { color: white; transition: transform 0.3s ease; }
+    .sidebar-toggle.collapsed svg { transform: rotate(180deg); }
+    
+    .main-content { 
+      margin-left: 260px; 
+      padding: 24px; 
+      transition: margin-left 0.3s ease;
+    }
+    .main-content.expanded { margin-left: 16px; }
+    
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #94a3b8; font-weight: 500; cursor: pointer; transition: all 0.2s; border-radius: 8px; margin: 4px 12px; text-decoration: none; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+    .nav-item.active { background: #f97316; color: white; }
+    .stat-card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .stat-value { font-size: 32px; font-weight: 800; color: #1e293b; }
+    .stat-label { color: #64748b; font-size: 14px; font-weight: 500; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .lead-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-left: 4px solid #f97316; transition: all 0.2s; }
+    .lead-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .lead-card.super { border-left-color: #22c55e; }
+    .lead-card.a { border-left-color: #f97316; }
+    .lead-card.b { border-left-color: #eab308; }
+    .lead-card.c { border-left-color: #06b6d4; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-super { background: #dcfce7; color: #16a34a; }
+    .badge-a { background: #ffedd5; color: #ea580c; }
+    .badge-b { background: #fef9c3; color: #ca8a04; }
+    .badge-c { background: #cffafe; color: #0891b2; }
+    .badge-new { background: #dcfce7; color: #16a34a; }
+    .badge-contacted { background: #dbeafe; color: #2563eb; }
+    .badge-won { background: #d1fae5; color: #059669; }
+    .badge-lost { background: #fee2e2; color: #dc2626; }
+    .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; border: none; }
+    .btn-primary { background: linear-gradient(135deg, #f97316, #ea580c); color: white; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(249,115,22,0.3); }
+    .btn-outline { background: white; border: 2px solid #e2e8f0; color: #64748b; }
+    .btn-outline:hover { border-color: #f97316; color: #f97316; }
+    .btn-success { background: #22c55e; color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .pipeline-col { background: #f8fafc; border-radius: 12px; padding: 16px; min-height: 400px; }
+    .pipeline-header { font-weight: 700; color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .pipeline-card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; }
+    .pipeline-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <!-- Sidebar Toggle Button -->
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+  </button>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="p-6 border-b border-slate-700">
+      <a href="index.html" class="flex items-center gap-3 text-white hover:opacity-80 transition">
+        <div class="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+          <i data-lucide="home" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="font-display font-bold text-white">HomeService Hub</div>
+          <div class="text-xs text-slate-400">Pro Portal</div>
+        </div>
+      </a>
+    </div>
+    <div class="p-4 border-b border-slate-700">
+      <div class="bg-slate-800 rounded-xl p-4">
+        <div class="text-slate-400 text-xs mb-1">Your Company</div>
+        <div class="text-white font-semibold" id="companyName">Loading...</div>
+      </div>
+    </div>
+    <nav class="py-4">
+      <div class="nav-item active" onclick="showSection('dashboard')"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span>Dashboard</span></div>
+      <a href="index.html" class="nav-item"><i data-lucide="shopping-cart" class="w-5 h-5"></i><span>Lead Store</span></a>
+      <div class="nav-item" onclick="showSection('leads')"><i data-lucide="target" class="w-5 h-5"></i><span>My Leads</span></div>
+      <div class="nav-item" onclick="showSection('pipeline')"><i data-lucide="kanban" class="w-5 h-5"></i><span>Pipeline</span></div>
+      <div class="nav-item" onclick="showSection('calendar')"><i data-lucide="calendar" class="w-5 h-5"></i><span>Calendar</span></div>
+      <div class="nav-item" onclick="showSection('settings')"><i data-lucide="settings" class="w-5 h-5"></i><span>Settings</span></div>
+    </nav>
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
+      <a href="#" onclick="logout()" class="nav-item"><i data-lucide="log-out" class="w-5 h-5"></i><span>Logout</span></a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    
+    <!-- Dashboard Section -->
+    <div id="dashboard" class="section active">
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="font-display text-2xl font-bold text-slate-800">Welcome back!</h1>
+          <p class="text-slate-500">Here's how your business is performing</p>
+        </div>
+        <a href="index.html" class="btn btn-primary"><i data-lucide="shopping-cart" class="w-4 h-4 inline mr-1"></i>Lead Store</a>
+      </div>
+      
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><i data-lucide="target" class="w-6 h-6 text-blue-600"></i></div>
+          </div>
+          <div class="stat-value" id="totalLeads">0</div>
+          <div class="stat-label">Total Leads</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><i data-lucide="trophy" class="w-6 h-6 text-green-600"></i></div>
+          </div>
+          <div class="stat-value" id="jobsWon">0</div>
+          <div class="stat-label">Jobs Won</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center"><i data-lucide="dollar-sign" class="w-6 h-6 text-orange-600"></i></div>
+          </div>
+          <div class="stat-value">$<span id="totalRevenue">0</span></div>
+          <div class="stat-label">Est. Revenue</div>
+        </div>
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center"><i data-lucide="percent" class="w-6 h-6 text-purple-600"></i></div>
+          </div>
+          <div class="stat-value" id="closeRate">0%</div>
+          <div class="stat-label">Close Rate</div>
+        </div>
+      </div>
+      
+      <!-- Charts & Stats -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div class="card p-6 lg:col-span-2">
+          <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Lead Activity (Last 30 Days)</h3>
+          <canvas id="activityChart" height="150"></canvas>
+        </div>
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg text-slate-800 mb-4">Pipeline Status</h3>
+          <canvas id="pipelineChart" height="200"></canvas>
+        </div>
+      </div>
+      
+      <!-- Performance Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="card p-6 text-center">
+          <div class="text-4xl font-black text-green-500 mb-2" id="avgResponseTime">2.5h</div>
+          <div class="text-slate-500 font-medium">Avg Response Time</div>
+          <div class="text-xs text-green-600 mt-1">Faster than 85% of pros</div>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="text-4xl font-black text-orange-500 mb-2" id="avgJobValue">$350</div>
+          <div class="text-slate-500 font-medium">Avg Job Value</div>
+          <div class="text-xs text-slate-400 mt-1">Based on won jobs</div>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="text-4xl font-black text-blue-500 mb-2" id="leadROI">5.2x</div>
+          <div class="text-slate-500 font-medium">Lead ROI</div>
+          <div class="text-xs text-blue-600 mt-1">Revenue per $ spent</div>
+        </div>
+      </div>
+      
+      <!-- Recent Leads -->
+      <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-display font-bold text-lg text-slate-800">Recent Leads</h3>
+          <button class="btn btn-outline btn-sm" onclick="showSection('leads')">View All</button>
+        </div>
+        <div id="recentLeads" class="space-y-3"></div>
+      </div>
+    </div>
+    
+    <!-- My Leads Section -->
+    <div id="leads" class="section">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">My Leads</h1>
+        <div class="flex gap-2">
+          <select id="leadFilter" class="btn btn-outline" onchange="filterLeads()">
+            <option value="all">All Leads</option>
+            <option value="new">New</option>
+            <option value="contacted">Contacted</option>
+            <option value="quoted">Quoted</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+          </select>
+        </div>
+      </div>
+      <div id="leadsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+    
+    <!-- Pipeline Section -->
+    <div id="pipeline" class="section">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">Sales Pipeline</h1>
+      </div>
+      <div class="grid grid-cols-5 gap-4">
+        <div class="pipeline-col">
+          <div class="pipeline-header">New <span class="float-right bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs" id="countNew">0</span></div>
+          <div id="pipeNew"></div>
+        </div>
+        <div class="pipeline-col">
+          <div class="pipeline-header">Contacted <span class="float-right bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full text-xs" id="countContacted">0</span></div>
+          <div id="pipeContacted"></div>
+        </div>
+        <div class="pipeline-col">
+          <div class="pipeline-header">Quoted <span class="float-right bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-xs" id="countQuoted">0</span></div>
+          <div id="pipeQuoted"></div>
+        </div>
+        <div class="pipeline-col">
+          <div class="pipeline-header">Scheduled <span class="float-right bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs" id="countScheduled">0</span></div>
+          <div id="pipeScheduled"></div>
+        </div>
+        <div class="pipeline-col" style="background: #f0fdf4;">
+          <div class="pipeline-header text-green-700">Won <span class="float-right bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs" id="countWon">0</span></div>
+          <div id="pipeWon"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Calendar Section -->
+    <div id="calendar" class="section">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 class="font-display text-2xl font-bold text-slate-800">Calendar</h1>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold"><i data-lucide="briefcase" class="w-3 h-3"></i> Job</span>
+          <span class="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold"><i data-lucide="phone" class="w-3 h-3"></i> Follow-up</span>
+          <span class="flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold"><i data-lucide="file-text" class="w-3 h-3"></i> Estimate</span>
+        </div>
+        <button class="btn btn-primary" onclick="openAddAppointmentModal()"><i data-lucide="plus" class="w-4 h-4 inline mr-1"></i>Add Appointment</button>
+      </div>
+      <div class="card">
+        <div class="p-4 border-b flex justify-between items-center">
+          <button onclick="changeMonth(-1)" class="btn btn-outline btn-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+          <h3 class="font-display font-bold text-lg" id="calendarMonth">March 2026</h3>
+          <button onclick="changeMonth(1)" class="btn btn-outline btn-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        </div>
+        <div class="grid grid-cols-7 text-center text-sm font-semibold text-slate-500 border-b">
+          <div class="py-3">Sun</div><div class="py-3">Mon</div><div class="py-3">Tue</div><div class="py-3">Wed</div><div class="py-3">Thu</div><div class="py-3">Fri</div><div class="py-3">Sat</div>
+        </div>
+        <div id="calendarGrid" class="grid grid-cols-7"></div>
+      </div>
+    </div>
+    
+    <!-- Settings Section -->
+    <div id="settings" class="section">
+      <h1 class="font-display text-2xl font-bold text-slate-800 mb-6">Settings</h1>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg mb-4">Business Info</h3>
+          <div class="space-y-4">
+            <div><label class="text-sm text-slate-500">Business Name</label><input type="text" id="settingName" class="w-full p-3 border rounded-lg"></div>
+            <div><label class="text-sm text-slate-500">Email</label><input type="email" id="settingEmail" class="w-full p-3 border rounded-lg"></div>
+            <div><label class="text-sm text-slate-500">Phone</label><input type="tel" id="settingPhone" class="w-full p-3 border rounded-lg"></div>
+          </div>
+          <button class="btn btn-primary mt-4">Save Changes</button>
+        </div>
+        <div class="card p-6">
+          <h3 class="font-display font-bold text-lg mb-4">Service Area</h3>
+          <div class="space-y-4">
+            <div><label class="text-sm text-slate-500">City</label><input type="text" id="settingCity" class="w-full p-3 border rounded-lg" placeholder="Greenville"></div>
+            <div><label class="text-sm text-slate-500">ZIP Codes (comma separated)</label><input type="text" id="settingZips" class="w-full p-3 border rounded-lg" onchange="updateServiceAreaMap()"></div>
+            <div><label class="text-sm text-slate-500">Service Radius (miles)</label>
+              <select id="settingRadius" class="w-full p-3 border rounded-lg" onchange="updateServiceAreaMap()">
+                <option value="10">10 miles</option>
+                <option value="20">20 miles</option>
+                <option value="30">30 miles</option>
+                <option value="50">50 miles</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary mt-4">Update Area</button>
+        </div>
+      </div>
+      <!-- Service Area Map -->
+      <div class="card p-6 mt-6">
+        <h3 class="font-display font-bold text-lg mb-4">Your Service Area</h3>
+        <div id="serviceAreaMap" class="w-full h-80 bg-slate-100 rounded-xl flex items-center justify-center">
+          <iframe id="mapFrame" width="100%" height="100%" style="border:0; border-radius: 12px;" loading="lazy" allowfullscreen src="https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=Greenville,SC&zoom=10"></iframe>
+        </div>
+        <p class="text-sm text-slate-400 mt-2">Map shows approximate service area based on your city and radius</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Message Modal -->
+  <div id="messageModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeMessageModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <h2 class="font-display text-xl font-bold mb-4">Send Message</h2>
+      <p class="text-slate-500 mb-4">To: <span id="messageTo" class="font-semibold text-slate-800"></span></p>
+      <textarea id="messageText" class="w-full p-3 border rounded-lg h-32" placeholder="Type your message..."></textarea>
+      <div class="flex justify-end gap-3 mt-4">
+        <button class="btn btn-outline" onclick="closeMessageModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="sendMessage()">Send SMS</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let companyId = null;
+    let currentUser = null;
+    let activityChart, pipelineChart;
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+      lucide.createIcons();
+      
+      // Check for demo mode first
+      const demoMode = localStorage.getItem('demoMode');
+      if (demoMode) {
+        // Demo mode - use hardcoded company
+        companyId = localStorage.getItem('proCompanyId') || '11111111-1111-1111-1111-111111111111';
+        document.getElementById('companyName').textContent = 'Demo Company';
+        
+        await loadCompanyInfo();
+        await loadDashboardData();
+        await loadLeads();
+        await loadPipeline();
+        await loadMarketplace();
+        await renderCalendar();
+        initCharts();
+        return;
+      }
+      
+      // Check authentication
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      if (!session) {
+        // Not logged in - redirect to login
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      // Get user info and company_id
+      const { data: user } = await supabaseClient
+        .from('users')
+        .select('*, companies(*)')
+        .eq('auth_id', session.user.id)
+        .single();
+      
+      if (!user) {
+        alert('User profile not found. Please contact support.');
+        await supabaseClient.auth.signOut();
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      currentUser = user;
+      companyId = user.company_id;
+      localStorage.setItem('proCompanyId', companyId);
+      
+      // Update UI with user info
+      document.getElementById('companyName').textContent = user.companies?.name || user.full_name || 'My Company';
+      
+      // Load all data
+      await loadCompanyInfo();
+      await loadDashboardData();
+      await loadLeads();
+      await loadPipeline();
+      await loadMarketplace();
+      await renderCalendar();
+      initCharts();
+    });
+    
+    // Logout function
+    async function logout() {
+      localStorage.removeItem('demoMode');
+      localStorage.removeItem('proCompanyId');
+      await supabaseClient.auth.signOut();
+      window.location.href = 'login.html';
+    }
+    
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(sectionId).classList.add('active');
+      event.target.closest('.nav-item').classList.add('active');
+      lucide.createIcons();
+      
+      // Re-render calendar when switching to calendar section
+      if (sectionId === 'calendar') {
+        renderCalendar();
+      }
+    }
+    
+    async function loadCompanyInfo() {
+      const { data } = await supabaseClient.from('companies').select('*').eq('id', companyId).single();
+      if (data) {
+        document.getElementById('companyName').textContent = data.name;
+        document.getElementById('settingName').value = data.name || '';
+        document.getElementById('settingEmail').value = data.email || '';
+        document.getElementById('settingPhone').value = data.phone || '';
+        document.getElementById('settingZips').value = data.zip_codes || '';
+      }
+    }
+    
+    async function loadDashboardData() {
+      // Get lead counts
+      const { data: leads } = await supabaseClient.from('crm_leads').select('*').eq('company_id', companyId);
+      
+      const totalLeads = leads?.length || 0;
+      const jobsWon = leads?.filter(l => l.status === 'won').length || 0;
+      const closeRate = totalLeads > 0 ? ((jobsWon / totalLeads) * 100).toFixed(0) : 0;
+      
+      // Estimate revenue (avg $350 per won job)
+      const revenue = jobsWon * 350;
+      
+      document.getElementById('totalLeads').textContent = totalLeads;
+      document.getElementById('jobsWon').textContent = jobsWon;
+      document.getElementById('totalRevenue').textContent = revenue.toLocaleString();
+      document.getElementById('closeRate').textContent = closeRate + '%';
+      
+      // Recent leads
+      const recentLeads = (leads || []).slice(0, 5);
+      document.getElementById('recentLeads').innerHTML = recentLeads.length ? recentLeads.map(lead => `
+        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+          <div>
+            <div class="font-semibold text-slate-800">${lead.name}</div>
+            <div class="text-sm text-slate-500">${lead.job_type || 'General'} • ${lead.city || ''}</div>
+          </div>
+          <span class="badge badge-${lead.status}">${lead.status}</span>
+        </div>
+      `).join('') : '<p class="text-slate-400 text-center py-4">No leads yet. <a href="#" onclick="showSection(\'marketplace\')" class="text-orange-500">Buy some leads!</a></p>';
+    }
+    
+    function initCharts() {
+      // Activity Chart
+      activityChart = new Chart(document.getElementById('activityChart'), {
+        type: 'line',
+        data: {
+          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+          datasets: [{
+            label: 'Leads',
+            data: [5, 8, 12, 10],
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249,115,22,0.1)',
+            fill: true,
+            tension: 0.4
+          }, {
+            label: 'Jobs Won',
+            data: [2, 3, 5, 4],
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34,197,94,0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+      
+      // Pipeline Chart
+      pipelineChart = new Chart(document.getElementById('pipelineChart'), {
+        type: 'doughnut',
+        data: {
+          labels: ['New', 'Contacted', 'Quoted', 'Scheduled', 'Won'],
+          datasets: [{
+            data: [5, 3, 4, 2, 8],
+            backgroundColor: ['#3b82f6', '#eab308', '#a855f7', '#f97316', '#22c55e']
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+      });
+    }
+    
+    async function loadLeads(filter = 'all') {
+      let query = supabaseClient.from('crm_leads').select('*').eq('company_id', companyId).order('created_at', { ascending: false });
+      if (filter !== 'all') query = query.eq('status', filter);
+      const { data } = await query;
+      
+      // Matching index.html tier colors
+      const tierBgColors = { 
+        SUPER: 'border-l-green-500 bg-gradient-to-r from-green-50 to-white', 
+        A: 'border-l-orange-500 bg-gradient-to-r from-orange-50 to-white', 
+        B: 'border-l-yellow-500 bg-gradient-to-r from-yellow-50 to-white', 
+        C: 'border-l-cyan-500 bg-gradient-to-r from-cyan-50 to-white', 
+        D: 'border-l-gray-400 bg-gradient-to-r from-gray-50 to-white'
+      };
+      const tierBadgeColors = { 
+        SUPER: 'bg-green-100 text-green-700', 
+        A: 'bg-orange-100 text-orange-700', 
+        B: 'bg-yellow-100 text-yellow-700', 
+        C: 'bg-cyan-100 text-cyan-700', 
+        D: 'bg-gray-100 text-gray-600' 
+      };
+      
+      document.getElementById('leadsList').innerHTML = data && data.length ? data.map(lead => `
+        <div class="bg-white border-l-4 ${tierBgColors[lead.tier] || 'border-l-gray-300'} rounded-xl p-5 shadow-sm hover:shadow-md transition">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <div class="font-bold text-slate-800">${lead.name}</div>
+              <div class="text-sm text-slate-500">${lead.phone}</div>
+            </div>
+            <div class="flex gap-2">
+              <span class="badge ${tierBadgeColors[lead.tier] || ''}">${lead.tier}</span>
+              <span class="badge badge-${lead.status}">${lead.status}</span>
+            </div>
+          </div>
+          <div class="text-sm text-slate-600 mb-2"><i data-lucide="briefcase" class="w-4 h-4 inline"></i> ${lead.job_type || 'General'}</div>
+          <div class="text-sm text-slate-500 mb-3"><i data-lucide="map-pin" class="w-4 h-4 inline"></i> ${lead.city}, ${lead.state} ${lead.zip}</div>
+          <div class="flex gap-2">
+            <a href="tel:${lead.phone}" class="btn btn-primary btn-sm flex-1 text-center"><i data-lucide="phone" class="w-4 h-4 inline mr-1"></i>Call</a>
+            <button class="btn btn-outline btn-sm flex-1" onclick="openMessageModal('${lead.name}', '${lead.phone}')"><i data-lucide="message-square" class="w-4 h-4 inline mr-1"></i>Message</button>
+          </div>
+        </div>
+      `).join('') : '<div class="col-span-3 text-center py-12 text-slate-400">No leads yet. <a href="#" onclick="showSection(\'marketplace\')" class="text-orange-500">Buy some leads!</a></div>';
+      lucide.createIcons();
+    }
+    
+    function filterLeads() {
+      const filter = document.getElementById('leadFilter').value;
+      loadLeads(filter);
+    }
+    
+    async function loadPipeline() {
+      const { data } = await supabaseClient.from('crm_leads').select('*').eq('company_id', companyId);
+      
+      const stages = { new: [], contacted: [], quoted: [], scheduled: [], won: [] };
+      (data || []).forEach(lead => {
+        if (stages[lead.status]) stages[lead.status].push(lead);
+      });
+      
+      Object.keys(stages).forEach(stage => {
+        const container = document.getElementById('pipe' + stage.charAt(0).toUpperCase() + stage.slice(1));
+        document.getElementById('count' + stage.charAt(0).toUpperCase() + stage.slice(1)).textContent = stages[stage].length;
+        container.innerHTML = stages[stage].map(lead => `
+          <div class="pipeline-card relative group">
+            <button onclick="deletePipelineLead('${lead.id}')" class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition p-1 hover:bg-red-100 rounded" title="Delete">
+              <i data-lucide="trash-2" class="w-3 h-3 text-red-500"></i>
+            </button>
+            <div class="font-semibold text-slate-800 text-sm">${lead.name}</div>
+            <div class="text-xs text-slate-500">${lead.job_type || 'General'}</div>
+            <div class="text-xs text-slate-400 mt-1">${lead.city || ''}</div>
+          </div>
+        `).join('') || '';
+        lucide.createIcons();
+      });
+    }
+    
+    async function deletePipelineLead(id) {
+      if (!confirm('Are you sure you want to delete this lead from your pipeline?')) return;
+      try {
+        const { error } = await supabaseClient.from('crm_leads').delete().eq('id', id);
+        if (error) throw error;
+        await loadPipeline();
+        await loadLeads();
+        await loadDashboardData();
+        alert('Lead deleted.');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+    
+    // ========== CALENDAR ==========
+    let currentCalendarDate = new Date();
+    let calendarAppointments = [];
+    
+    async function loadCalendarAppointments() {
+      const year = currentCalendarDate.getFullYear();
+      const month = currentCalendarDate.getMonth();
+      const startOfMonth = new Date(year, month, 1).toISOString();
+      const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
+      
+      console.log('Loading appointments for company:', companyId);
+      console.log('Date range:', startOfMonth, 'to', endOfMonth);
+      
+      const { data, error } = await supabaseClient
+        .from('appointments')
+        .select('*')
+        .eq('company_id', companyId)
+        .gte('start_time', startOfMonth)
+        .lte('start_time', endOfMonth)
+        .order('start_time', { ascending: true });
+      
+      if (error) {
+        console.error('Error loading appointments:', error);
+      }
+      calendarAppointments = data || [];
+      console.log('Loaded appointments:', calendarAppointments);
+    }
+    
+    async function renderCalendar() {
+      await loadCalendarAppointments();
+      
+      const year = currentCalendarDate.getFullYear();
+      const month = currentCalendarDate.getMonth();
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      document.getElementById('calendarMonth').textContent = `${monthNames[month]} ${year}`;
+      
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const today = new Date();
+      
+      let html = '';
+      // Empty cells for days before first of month
+      for (let i = 0; i < firstDay; i++) {
+        html += '<div class="p-4 border-b border-r border-slate-100 bg-slate-50"></div>';
+      }
+      // Days of month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        // Filter appointments for this day (handle both ISO format and space-separated format)
+        const dayAppts = calendarAppointments.filter(a => {
+          if (!a.start_time) return false;
+          const aptDate = a.start_time.substring(0, 10); // Get YYYY-MM-DD part
+          return aptDate === dateStr;
+        });
+        
+        const typeColors = {
+          'job': 'bg-blue-100 text-blue-700',
+          'follow-up': 'bg-purple-100 text-purple-700',
+          'estimate': 'bg-amber-100 text-amber-700'
+        };
+        
+        html += `<div class="p-2 border-b border-r border-slate-100 min-h-24 ${isToday ? 'bg-orange-50' : ''}">
+          <div class="font-semibold text-sm ${isToday ? 'text-orange-600' : 'text-slate-600'}">${day}</div>
+          ${dayAppts.map(apt => `
+            <div class="text-xs mt-1 px-1 py-0.5 rounded ${typeColors[apt.type] || 'bg-slate-100 text-slate-600'} truncate" title="${apt.title}">
+              ${apt.title}
+            </div>
+          `).join('')}
+        </div>`;
+      }
+      document.getElementById('calendarGrid').innerHTML = html;
+    }
+    
+    async function changeMonth(delta) {
+      currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+      await renderCalendar();
+    }
+    
+    // ========== MESSAGE MODAL ==========
+    let currentMessageLead = null;
+    
+    function openMessageModal(name, phone) {
+      currentMessageLead = { name, phone };
+      document.getElementById('messageTo').textContent = `${name} (${phone})`;
+      document.getElementById('messageText').value = '';
+      document.getElementById('messageModal').classList.remove('hidden');
+    }
+    
+    function closeMessageModal() {
+      document.getElementById('messageModal').classList.add('hidden');
+    }
+    
+    function sendMessage() {
+      const message = document.getElementById('messageText').value.trim();
+      if (!message) {
+        alert('Please enter a message');
+        return;
+      }
+      // In production, this would call Twilio API
+      alert(`Message sent to ${currentMessageLead.name}!\\n\\n"${message}"`);
+      closeMessageModal();
+    }
+    
+    // ========== SERVICE AREA MAP ==========
+    function updateServiceAreaMap() {
+      const city = document.getElementById('settingCity').value || 'Greenville';
+      const radius = document.getElementById('settingRadius').value || 20;
+      // Zoom levels: 10mi=11, 20mi=10, 30mi=9, 50mi=8
+      const zoomLevels = { '10': 11, '20': 10, '30': 9, '50': 8 };
+      const zoom = zoomLevels[radius] || 10;
+      document.getElementById('mapFrame').src = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(city)},SC&zoom=${zoom}`;
+    }
+    
+    // ========== SIDEBAR TOGGLE ==========
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.getElementById('sidebarToggle');
+      const mainContent = document.querySelector('.main-content');
+      
+      sidebar.classList.toggle('collapsed');
+      toggle.classList.toggle('collapsed');
+      mainContent.classList.toggle('expanded');
+      
+      lucide.createIcons();
+    }
+    
+    // Initialize calendar on load
+    document.addEventListener('DOMContentLoaded', function() {
+      renderCalendar();
+      // Auto-collapse sidebar on mobile
+      if (window.innerWidth < 768) {
+        toggleSidebar();
+      }
+    });
+  </script>
+</body>
+</html>

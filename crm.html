@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HomeService Hub - CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #fafaf9; min-height: 100vh; }
+    h1, h2, h3, .font-display { font-family: 'Nunito', sans-serif; }
+    
+    .pipeline-col { min-width: 280px; max-width: 280px; background: #f5f5f4; border-radius: 16px; }
+    .pipeline-header { padding: 14px 16px; border-bottom: 1px solid #e7e5e4; }
+    .pipeline-cards { padding: 12px; min-height: 200px; max-height: calc(100vh - 320px); overflow-y: auto; }
+    
+    .lead-card { 
+      background: white; border: 1px solid #e7e5e4; border-radius: 12px; 
+      padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s;
+    }
+    .lead-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: #f97316; }
+    .lead-card.tier-super { border-left: 4px solid #ef4444; }
+    .lead-card.tier-a { border-left: 4px solid #f97316; }
+    .lead-card.tier-b { border-left: 4px solid #eab308; }
+    .lead-card.tier-c { border-left: 4px solid #22c55e; }
+    
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; border-radius: 10px; transition: all 0.2s; cursor: pointer; border: none; }
+    .btn-primary { background: #f97316; color: white; padding: 10px 18px; }
+    .btn-primary:hover { background: #ea580c; }
+    .btn-outline { background: white; border: 2px solid #e7e5e4; color: #57534e; padding: 10px 18px; }
+    .btn-outline:hover { border-color: #f97316; color: #f97316; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    .btn-success { background: #22c55e; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+    
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-bg.open { display: flex; }
+    .modal { background: white; border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow: hidden; }
+    .modal-header { padding: 20px; border-bottom: 1px solid #e7e5e4; display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 20px; overflow-y: auto; max-height: 60vh; }
+    .modal-footer { padding: 16px 20px; border-top: 1px solid #e7e5e4; display: flex; justify-content: flex-end; gap: 10px; }
+    
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-weight: 600; font-size: 13px; color: #57534e; margin-bottom: 6px; }
+    .form-input { width: 100%; padding: 10px 14px; border: 2px solid #e7e5e4; border-radius: 10px; font-size: 14px; }
+    .form-input:focus { outline: none; border-color: #f97316; }
+    
+    .stat-card { background: white; border: 1px solid #e7e5e4; border-radius: 14px; padding: 16px; }
+    .tier-badge { padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+    .tier-super { background: #fef2f2; color: #dc2626; }
+    .tier-a { background: #fff7ed; color: #ea580c; }
+    .tier-b { background: #fefce8; color: #ca8a04; }
+    .tier-c { background: #f0fdf4; color: #16a34a; }
+    
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid #e7e5e4; padding: 0 20px; }
+    .tab { padding: 12px 16px; font-weight: 600; color: #78716c; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tab:hover { color: #f97316; }
+    .tab.active { color: #f97316; border-bottom-color: #f97316; }
+    
+    .note-item { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .activity-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f5f5f4; }
+    
+    .status-select { padding: 6px 10px; border-radius: 8px; font-weight: 600; font-size: 12px; border: none; cursor: pointer; }
+    .status-new { background: #dbeafe; color: #1d4ed8; }
+    .status-contacted { background: #fef3c7; color: #b45309; }
+    .status-quoted { background: #e9d5ff; color: #7c3aed; }
+    .status-scheduled { background: #cffafe; color: #0891b2; }
+    .status-won { background: #dcfce7; color: #15803d; }
+    .status-lost { background: #fee2e2; color: #b91c1c; }
+    
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="bg-white border-b border-stone-200 sticky top-0 z-50">
+    <div class="max-w-full mx-auto px-6 flex justify-between items-center h-16">
+      <a href="index.html" class="flex items-center gap-3 hover:opacity-80 transition">
+        <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+          <i data-lucide="home" class="w-5 h-5 text-white"></i>
+        </div>
+        <span class="font-display font-extrabold text-xl text-stone-800 hidden sm:inline">HomeService</span>
+        <span class="font-display font-extrabold text-xl text-orange-500 hidden sm:inline">Hub</span>
+      </a>
+      
+      <!-- Desktop Nav -->
+      <nav class="hidden md:flex items-center gap-2">
+        <a href="pro-dashboard.html" class="flex items-center gap-2 px-4 py-2 rounded-lg text-stone-500 hover:bg-orange-50 hover:text-orange-600 font-semibold">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+        </a>
+        <a href="index.html" class="flex items-center gap-2 px-4 py-2 rounded-lg text-stone-500 hover:bg-orange-50 hover:text-orange-600 font-semibold">
+          <i data-lucide="shopping-cart" class="w-4 h-4"></i> Lead Store
+        </a>
+        <a href="crm.html" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-50 text-orange-600 font-semibold">
+          <i data-lucide="users" class="w-4 h-4"></i> CRM
+        </a>
+        <a href="calendar.html" class="flex items-center gap-2 px-4 py-2 rounded-lg text-stone-500 hover:bg-orange-50 hover:text-orange-600 font-semibold">
+          <i data-lucide="calendar" class="w-4 h-4"></i> Calendar
+        </a>
+      </nav>
+      
+      <div class="hidden md:flex items-center gap-3">
+        <a href="intake.html" class="text-stone-400 hover:text-stone-600 text-sm">Logout</a>
+      </div>
+      
+      <!-- Mobile Hamburger -->
+      <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg hover:bg-orange-50">
+        <i data-lucide="menu" class="w-6 h-6 text-stone-600"></i>
+      </button>
+    </div>
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden md:hidden bg-white border-t border-stone-200 px-6 py-4">
+      <a href="pro-dashboard.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">
+        <i data-lucide="layout-dashboard" class="w-5 h-5 text-orange-500"></i> Dashboard
+      </a>
+      <a href="index.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">
+        <i data-lucide="shopping-cart" class="w-5 h-5 text-orange-500"></i> Lead Store
+      </a>
+      <a href="crm.html" class="flex items-center gap-3 py-3 text-orange-500 font-semibold">
+        <i data-lucide="users" class="w-5 h-5"></i> CRM
+      </a>
+      <a href="calendar.html" class="flex items-center gap-3 py-3 text-stone-700 font-semibold">
+        <i data-lucide="calendar" class="w-5 h-5 text-orange-500"></i> Calendar
+      </a>
+      <div class="border-t border-stone-200 mt-2 pt-2">
+        <a href="intake.html" class="flex items-center gap-3 py-3 text-stone-500 font-semibold">
+          <i data-lucide="log-out" class="w-5 h-5"></i> Logout
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="p-6">
+    <!-- Page Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="font-display text-2xl md:text-3xl font-extrabold text-stone-800 mb-1">CRM Pipeline</h1>
+        <p class="text-stone-500">Manage your leads and track conversions</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"></i>
+          <input type="text" id="searchInput" placeholder="Search leads..." 
+                 class="bg-white border-2 border-stone-200 rounded-xl pl-10 pr-4 py-2.5 w-64 focus:outline-none focus:border-orange-400"
+                 oninput="handleSearch(this.value)">
+        </div>
+        <button onclick="openAddModal()" class="btn btn-primary">
+          <i data-lucide="plus" class="w-4 h-4"></i> Add Lead
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="users" class="w-5 h-5 text-blue-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-stone-800" id="statTotal">0</div>
+          <div class="text-xs text-stone-500">Total</div>
+        </div>
+      </div>
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="phone" class="w-5 h-5 text-amber-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-amber-600" id="statContacted">0</div>
+          <div class="text-xs text-stone-500">Contacted</div>
+        </div>
+      </div>
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="file-text" class="w-5 h-5 text-purple-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-purple-600" id="statQuoted">0</div>
+          <div class="text-xs text-stone-500">Quoted</div>
+        </div>
+      </div>
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="calendar" class="w-5 h-5 text-cyan-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-cyan-600" id="statScheduled">0</div>
+          <div class="text-xs text-stone-500">Scheduled</div>
+        </div>
+      </div>
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="trophy" class="w-5 h-5 text-green-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-green-600" id="statWon">0</div>
+          <div class="text-xs text-stone-500">Won</div>
+        </div>
+      </div>
+      <div class="stat-card flex items-center gap-3">
+        <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+          <i data-lucide="dollar-sign" class="w-5 h-5 text-green-500"></i>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold text-green-600" id="statRevenue">$0</div>
+          <div class="text-xs text-stone-500">Revenue</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pipeline Board -->
+    <div class="flex gap-4 overflow-x-auto pb-4" id="pipelineBoard">
+      <div class="text-center py-20 text-stone-400 w-full">
+        <i data-lucide="loader" class="w-8 h-8 mx-auto mb-2 animate-spin"></i>
+        <p>Loading leads...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Lead Detail Modal -->
+  <div id="leadModal" class="modal-bg" onclick="if(event.target===this)closeLeadModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="font-display text-xl font-bold text-stone-800" id="leadModalTitle">Lead Details</h3>
+        <button onclick="closeLeadModal()" class="p-2 hover:bg-stone-100 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5 text-stone-500"></i>
+        </button>
+      </div>
+      <div class="tabs" id="leadTabs"></div>
+      <div class="modal-body" id="leadModalBody"></div>
+      <div class="modal-footer" id="leadModalFooter"></div>
+    </div>
+  </div>
+
+  <!-- Add Lead Modal -->
+  <div id="addModal" class="modal-bg" onclick="if(event.target===this)closeAddModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="font-display text-xl font-bold text-stone-800">Add New Lead</h3>
+        <button onclick="closeAddModal()" class="p-2 hover:bg-stone-100 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5 text-stone-500"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="form-group col-span-2">
+            <label class="form-label">Name *</label>
+            <input type="text" id="addName" class="form-input" placeholder="Customer name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="tel" id="addPhone" class="form-input" placeholder="(555) 555-5555">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="addEmail" class="form-input" placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" id="addCity" class="form-input" placeholder="City">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ZIP</label>
+            <input type="text" id="addZip" class="form-input" placeholder="29301">
+          </div>
+          <div class="form-group col-span-2">
+            <label class="form-label">Address</label>
+            <input type="text" id="addAddress" class="form-input" placeholder="Street address">
+          </div>
+          <div class="form-group col-span-2">
+            <label class="form-label">Service Details</label>
+            <textarea id="addDetails" class="form-input" rows="3" placeholder="Describe the job..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Source</label>
+            <select id="addSource" class="form-input">
+              <option value="referral">Referral</option>
+              <option value="website">Website</option>
+              <option value="phone">Phone Call</option>
+              <option value="marketplace">Marketplace</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Job Value ($)</label>
+            <input type="number" id="addValue" class="form-input" placeholder="0.00">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeAddModal()" class="btn btn-outline">Cancel</button>
+        <button onclick="createLead()" class="btn btn-primary">
+          <i data-lucide="plus" class="w-4 h-4"></i> Add Lead
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Embed Code Modal -->
+  <div id="embedModal" class="modal-bg" onclick="if(event.target===this)closeEmbedModal()">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 class="font-display text-xl font-bold text-stone-800">Embed Booking Widget</h3>
+        <button onclick="closeEmbedModal()" class="p-2 hover:bg-stone-100 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5 text-stone-500"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="text-stone-600 mb-4">Add this booking widget to your website so customers can schedule appointments directly.</p>
+        
+        <div class="mb-6">
+          <h4 class="font-semibold text-stone-800 mb-2 flex items-center gap-2">
+            <i data-lucide="link" class="w-4 h-4 text-orange-500"></i>
+            Direct Link
+          </h4>
+          <p class="text-sm text-stone-500 mb-2">Share this link with customers:</p>
+          <div class="flex gap-2">
+            <input type="text" id="directLink" readonly 
+                   class="form-input flex-1 bg-stone-50 text-sm font-mono" 
+                   value="">
+            <button onclick="copyToClipboard('directLink')" class="btn btn-primary">
+              <i data-lucide="copy" class="w-4 h-4"></i> Copy
+            </button>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <h4 class="font-semibold text-stone-800 mb-2 flex items-center gap-2">
+            <i data-lucide="code" class="w-4 h-4 text-orange-500"></i>
+            Embed Code (iframe)
+          </h4>
+          <p class="text-sm text-stone-500 mb-2">Paste this code into your website HTML:</p>
+          <textarea id="embedCode" readonly rows="4"
+                    class="form-input bg-stone-50 text-sm font-mono w-full"></textarea>
+          <button onclick="copyToClipboard('embedCode')" class="btn btn-primary mt-2">
+            <i data-lucide="copy" class="w-4 h-4"></i> Copy Embed Code
+          </button>
+        </div>
+        
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <h4 class="font-semibold text-amber-800 mb-1 flex items-center gap-2">
+            <i data-lucide="lightbulb" class="w-4 h-4"></i>
+            Tips
+          </h4>
+          <ul class="text-sm text-amber-700 space-y-1">
+            <li>• Adjust the width and height to fit your page design</li>
+            <li>• The widget works on any website platform (WordPress, Wix, Squarespace, etc.)</li>
+            <li>• All bookings will appear in your CRM automatically</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeEmbedModal()" class="btn btn-outline">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== SUPABASE CONFIG ==========
+    const SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+    
+    // Get company ID from URL param or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const COMPANY_ID = urlParams.get('company') || localStorage.getItem('proCompanyId') || '11111111-1111-1111-1111-111111111111';
+    
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // ========== STATE ==========
+    let leads = [];
+    let currentLead = null;
+    let searchTerm = '';
+    
+    const STATUSES = [
+      { id: 'new', label: 'New', icon: 'inbox', color: 'blue' },
+      { id: 'contacted', label: 'Contacted', icon: 'phone', color: 'amber' },
+      { id: 'quoted', label: 'Quoted', icon: 'file-text', color: 'purple' },
+      { id: 'scheduled', label: 'Scheduled', icon: 'calendar', color: 'cyan' },
+      { id: 'won', label: 'Won', icon: 'trophy', color: 'green' },
+      { id: 'lost', label: 'Lost', icon: 'x-circle', color: 'red' }
+    ];
+
+    // ========== INIT ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      loadLeads();
+    });
+
+    // ========== DATA ==========
+    async function loadLeads() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('crm_leads')
+          .select('*')
+          .eq('company_id', COMPANY_ID)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        leads = data || [];
+        renderPipeline();
+        updateStats();
+      } catch (err) {
+        console.error('Error:', err);
+        document.getElementById('pipelineBoard').innerHTML = `
+          <div class="text-center py-20 text-red-500 w-full">
+            <i data-lucide="alert-circle" class="w-8 h-8 mx-auto mb-2"></i>
+            <p>Error loading leads: ${err.message}</p>
+            <button onclick="loadLeads()" class="btn btn-primary mt-4">Retry</button>
+          </div>
+        `;
+        lucide.createIcons();
+      }
+    }
+
+    async function createLead() {
+      const name = document.getElementById('addName').value.trim();
+      if (!name) return alert('Name is required');
+      
+      const newLead = {
+        company_id: COMPANY_ID,
+        name,
+        phone: document.getElementById('addPhone').value,
+        email: document.getElementById('addEmail').value,
+        city: document.getElementById('addCity').value,
+        zip: document.getElementById('addZip').value,
+        address: document.getElementById('addAddress').value,
+        service_details: document.getElementById('addDetails').value,
+        source: document.getElementById('addSource').value,
+        job_value: parseFloat(document.getElementById('addValue').value) || null,
+        status: 'new',
+        state: 'SC'
+      };
+      
+      try {
+        const { data, error } = await supabaseClient.from('crm_leads').insert([newLead]).select();
+        if (error) throw error;
+        leads.unshift(data[0]);
+        renderPipeline();
+        updateStats();
+        closeAddModal();
+        clearAddForm();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function updateLeadStatus(id, status) {
+      try {
+        const { error } = await supabaseClient.from('crm_leads').update({ status }).eq('id', id);
+        if (error) throw error;
+        const lead = leads.find(l => l.id === id);
+        if (lead) lead.status = status;
+        renderPipeline();
+        updateStats();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function updateLead(id, updates) {
+      try {
+        const { error } = await supabaseClient.from('crm_leads').update(updates).eq('id', id);
+        if (error) throw error;
+        const idx = leads.findIndex(l => l.id === id);
+        if (idx >= 0) leads[idx] = { ...leads[idx], ...updates };
+        renderPipeline();
+        updateStats();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function addNote(leadId, content) {
+      try {
+        const { error } = await supabaseClient.from('lead_notes').insert([{ lead_id: leadId, content }]);
+        if (error) throw error;
+        return true;
+      } catch (err) {
+        alert('Error: ' + err.message);
+        return false;
+      }
+    }
+
+    async function loadNotes(leadId) {
+      const { data } = await supabaseClient.from('lead_notes').select('*').eq('lead_id', leadId).order('created_at', { ascending: false });
+      return data || [];
+    }
+
+    async function loadActivities(leadId) {
+      const { data } = await supabaseClient.from('lead_activities').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(20);
+      return data || [];
+    }
+
+    // ========== RENDER ==========
+    function renderPipeline() {
+      const board = document.getElementById('pipelineBoard');
+      const filtered = searchTerm 
+        ? leads.filter(l => (l.name + l.city + l.service_details).toLowerCase().includes(searchTerm.toLowerCase()))
+        : leads;
+      
+      board.innerHTML = STATUSES.map(s => {
+        const statusLeads = filtered.filter(l => l.status === s.id);
+        return `
+          <div class="pipeline-col" ondragover="event.preventDefault()" ondrop="dropLead(event,'${s.id}')">
+            <div class="pipeline-header flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-${s.color}-100 rounded-lg flex items-center justify-center">
+                  <i data-lucide="${s.icon}" class="w-4 h-4 text-${s.color}-600"></i>
+                </div>
+                <span class="font-bold text-stone-800">${s.label}</span>
+              </div>
+              <span class="text-sm font-bold text-stone-400">${statusLeads.length}</span>
+            </div>
+            <div class="pipeline-cards">
+              ${statusLeads.length === 0 ? `<div class="text-center py-8 text-stone-400 text-sm">No leads</div>` : ''}
+              ${statusLeads.map(l => renderCard(l)).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function renderCard(lead) {
+      const tier = lead.tier ? lead.tier.toLowerCase() : '';
+      const tierBadge = lead.tier ? `<span class="tier-badge tier-${tier}">${lead.tier}</span>` : '';
+      const value = lead.job_value ? `<span class="text-sm font-bold text-green-600">$${Number(lead.job_value).toLocaleString()}</span>` : '';
+      
+      return `
+        <div class="lead-card ${tier ? 'tier-'+tier : ''} relative group" draggable="true" ondragstart="dragLead(event,'${lead.id}')" onclick="openLeadModal('${lead.id}')">
+          <button onclick="event.stopPropagation(); deleteLead('${lead.id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition p-1 hover:bg-red-100 rounded z-10" title="Delete Lead">
+            <i data-lucide="trash-2" class="w-3 h-3 text-red-500"></i>
+          </button>
+          <div class="flex justify-between items-start mb-2">
+            <span class="font-semibold text-stone-800 text-sm">${lead.name || 'Unknown'}</span>
+            ${tierBadge}
+          </div>
+          <div class="flex items-center gap-1 text-stone-500 text-xs mb-2">
+            <i data-lucide="map-pin" class="w-3 h-3"></i>
+            ${lead.city || 'No city'}${lead.state ? ', '+lead.state : ''}
+          </div>
+          ${lead.service_details ? `<p class="text-xs text-stone-400 mb-2 line-clamp-2">${lead.service_details}</p>` : ''}
+          <div class="flex justify-between items-center mt-2 pt-2 border-t border-stone-100">
+            <div class="flex gap-2">
+              ${lead.phone ? `<i data-lucide="phone" class="w-3 h-3 text-stone-400"></i>` : ''}
+              ${lead.email ? `<i data-lucide="mail" class="w-3 h-3 text-stone-400"></i>` : ''}
+            </div>
+            ${value}
+          </div>
+        </div>
+      `;
+    }
+    
+    async function deleteLead(id) {
+      if (!confirm('Are you sure you want to delete this lead?')) return;
+      try {
+        const { error } = await supabaseClient.from('crm_leads').delete().eq('id', id);
+        if (error) throw error;
+        leads = leads.filter(l => l.id !== id);
+        renderPipeline();
+        updateStats();
+        closeLeadModal();
+        alert('Lead deleted.');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('statTotal').textContent = leads.length;
+      document.getElementById('statContacted').textContent = leads.filter(l => l.status === 'contacted').length;
+      document.getElementById('statQuoted').textContent = leads.filter(l => l.status === 'quoted').length;
+      document.getElementById('statScheduled').textContent = leads.filter(l => l.status === 'scheduled').length;
+      document.getElementById('statWon').textContent = leads.filter(l => l.status === 'won').length;
+      const rev = leads.filter(l => l.status === 'won' && l.job_value).reduce((s, l) => s + Number(l.job_value), 0);
+      document.getElementById('statRevenue').textContent = '$' + rev.toLocaleString();
+    }
+
+    // ========== DRAG & DROP ==========
+    let draggedId = null;
+    function dragLead(e, id) { draggedId = id; }
+    function dropLead(e, status) {
+      e.preventDefault();
+      if (draggedId) updateLeadStatus(draggedId, status);
+      draggedId = null;
+    }
+
+    // ========== SEARCH ==========
+    function handleSearch(val) {
+      searchTerm = val;
+      renderPipeline();
+    }
+
+    // ========== MODALS ==========
+    function openAddModal() { document.getElementById('addModal').classList.add('open'); lucide.createIcons(); }
+    function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+    
+    // Embed Modal
+    function openEmbedModal() { 
+      const baseUrl = window.location.origin;
+      const directLink = `${baseUrl}/book-embed.html?company=${COMPANY_ID}`;
+      const embedCode = `<iframe src="${directLink}" width="100%" height="700" frameborder="0" style="border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);"></iframe>`;
+      
+      document.getElementById('directLink').value = directLink;
+      document.getElementById('embedCode').value = embedCode;
+      document.getElementById('embedModal').classList.add('open'); 
+      lucide.createIcons(); 
+    }
+    function closeEmbedModal() { document.getElementById('embedModal').classList.remove('open'); }
+    
+    function copyToClipboard(elementId) {
+      const el = document.getElementById(elementId);
+      el.select();
+      document.execCommand('copy');
+      alert('✅ Copied to clipboard!');
+    }
+    function clearAddForm() {
+      ['addName','addPhone','addEmail','addCity','addZip','addAddress','addDetails','addValue'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    function openLeadModal(id) {
+      currentLead = leads.find(l => l.id === id);
+      if (!currentLead) return;
+      document.getElementById('leadModalTitle').textContent = currentLead.name || 'Lead Details';
+      document.getElementById('leadModal').classList.add('open');
+      renderLeadTabs();
+      showTab('details');
+    }
+    function closeLeadModal() { 
+      document.getElementById('leadModal').classList.remove('open'); 
+      currentLead = null; 
+    }
+
+    function renderLeadTabs() {
+      document.getElementById('leadTabs').innerHTML = `
+        <div class="tab active" data-tab="details" onclick="showTab('details')">Details</div>
+        <div class="tab" data-tab="notes" onclick="showTab('notes')">Notes</div>
+        <div class="tab" data-tab="estimate" onclick="showTab('estimate')">Estimate</div>
+        <div class="tab" data-tab="invoice" onclick="showTab('invoice')">Invoice</div>
+        <div class="tab" data-tab="activity" onclick="showTab('activity')">Activity</div>
+      `;
+    }
+
+    async function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+      const body = document.getElementById('leadModalBody');
+      const footer = document.getElementById('leadModalFooter');
+      
+      if (tab === 'details') {
+        body.innerHTML = `
+          <div class="grid grid-cols-2 gap-4">
+            <div class="form-group col-span-2">
+              <label class="form-label">Status</label>
+              <select id="editStatus" class="form-input status-select status-${currentLead.status}" onchange="this.className='form-input status-select status-'+this.value">
+                ${STATUSES.map(s => `<option value="${s.id}" ${currentLead.status===s.id?'selected':''}>${s.label}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group col-span-2"><label class="form-label">Name</label><input type="text" id="editName" class="form-input" value="${currentLead.name||''}"></div>
+            <div class="form-group"><label class="form-label">Phone</label><input type="tel" id="editPhone" class="form-input" value="${currentLead.phone||''}"></div>
+            <div class="form-group"><label class="form-label">Email</label><input type="email" id="editEmail" class="form-input" value="${currentLead.email||''}"></div>
+            <div class="form-group col-span-2"><label class="form-label">Address</label><input type="text" id="editAddress" class="form-input" value="${currentLead.address||''}"></div>
+            <div class="form-group"><label class="form-label">City</label><input type="text" id="editCity" class="form-input" value="${currentLead.city||''}"></div>
+            <div class="form-group"><label class="form-label">ZIP</label><input type="text" id="editZip" class="form-input" value="${currentLead.zip||''}"></div>
+            <div class="form-group col-span-2"><label class="form-label">Service Details</label><textarea id="editDetails" class="form-input" rows="3">${currentLead.service_details||''}</textarea></div>
+            <div class="form-group"><label class="form-label">Job Value ($)</label><input type="number" id="editValue" class="form-input" value="${currentLead.job_value||''}"></div>
+            <div class="form-group"><label class="form-label">Source</label><input type="text" id="editSource" class="form-input" value="${currentLead.source||''}" readonly></div>
+          </div>
+        `;
+        footer.innerHTML = `
+          <button onclick="closeLeadModal()" class="btn btn-outline">Cancel</button>
+          <button onclick="saveLead()" class="btn btn-primary"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
+        `;
+      } else if (tab === 'notes') {
+        const notes = await loadNotes(currentLead.id);
+        body.innerHTML = `
+          <div class="mb-4">
+            <textarea id="newNote" class="form-input" rows="3" placeholder="Add a note..."></textarea>
+            <button onclick="saveNote()" class="btn btn-primary btn-sm mt-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Note</button>
+          </div>
+          <div id="notesList">
+            ${notes.length === 0 ? '<p class="text-stone-400 text-sm">No notes yet</p>' : notes.map(n => `
+              <div class="note-item">
+                <p class="text-sm text-stone-700">${n.content}</p>
+                <p class="text-xs text-stone-400 mt-2">${new Date(n.created_at).toLocaleString()}</p>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        footer.innerHTML = `<button onclick="closeLeadModal()" class="btn btn-outline">Close</button>`;
+      } else if (tab === 'activity') {
+        const activities = await loadActivities(currentLead.id);
+        body.innerHTML = `
+          <div>
+            ${activities.length === 0 ? '<p class="text-stone-400 text-sm">No activity yet</p>' : activities.map(a => `
+              <div class="activity-item">
+                <div class="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i data-lucide="${a.activity_type === 'note' ? 'message-square' : a.activity_type === 'call' ? 'phone' : 'activity'}" class="w-4 h-4 text-stone-500"></i>
+                </div>
+                <div>
+                  <p class="text-sm text-stone-700">${a.description || a.activity_type}</p>
+                  <p class="text-xs text-stone-400">${new Date(a.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        footer.innerHTML = `<button onclick="closeLeadModal()" class="btn btn-outline">Close</button>`;
+      } else if (tab === 'estimate') {
+        const estimate = await loadEstimate(currentLead.id);
+        if (estimate) {
+          body.innerHTML = renderExistingEstimate(estimate);
+          footer.innerHTML = `
+            <button onclick="closeLeadModal()" class="btn btn-outline">Close</button>
+            ${estimate.status === 'accepted' ? `<button onclick="convertToInvoice('${estimate.id}')" class="btn btn-success"><i data-lucide="receipt" class="w-4 h-4"></i> Convert to Invoice</button>` : ''}
+            <button onclick="printEstimate('${estimate.id}')" class="btn btn-primary"><i data-lucide="printer" class="w-4 h-4"></i> Print</button>
+          `;
+        } else {
+          body.innerHTML = renderNewEstimateForm();
+          footer.innerHTML = `
+            <button onclick="closeLeadModal()" class="btn btn-outline">Cancel</button>
+            <button onclick="saveEstimate()" class="btn btn-primary"><i data-lucide="save" class="w-4 h-4"></i> Save Estimate</button>
+          `;
+        }
+      } else if (tab === 'invoice') {
+        const invoice = await loadInvoice(currentLead.id);
+        if (invoice) {
+          body.innerHTML = renderExistingInvoice(invoice);
+          footer.innerHTML = `
+            <button onclick="closeLeadModal()" class="btn btn-outline">Close</button>
+            ${invoice.status !== 'paid' ? `<button onclick="markInvoicePaid('${invoice.id}')" class="btn btn-success"><i data-lucide="check" class="w-4 h-4"></i> Mark Paid</button>` : ''}
+            <button onclick="printInvoice('${invoice.id}')" class="btn btn-primary"><i data-lucide="printer" class="w-4 h-4"></i> Print</button>
+          `;
+        } else {
+          body.innerHTML = `
+            <div class="text-center py-8">
+              <div class="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="receipt" class="w-8 h-8 text-stone-400"></i>
+              </div>
+              <p class="text-stone-500 mb-4">No invoice yet</p>
+              <p class="text-stone-400 text-sm">Create an estimate first, then convert it to an invoice when accepted.</p>
+            </div>
+          `;
+          footer.innerHTML = `<button onclick="closeLeadModal()" class="btn btn-outline">Close</button>`;
+        }
+      }
+      lucide.createIcons();
+    }
+
+    async function saveLead() {
+      const updates = {
+        status: document.getElementById('editStatus').value,
+        name: document.getElementById('editName').value,
+        phone: document.getElementById('editPhone').value,
+        email: document.getElementById('editEmail').value,
+        address: document.getElementById('editAddress').value,
+        city: document.getElementById('editCity').value,
+        zip: document.getElementById('editZip').value,
+        service_details: document.getElementById('editDetails').value,
+        job_value: parseFloat(document.getElementById('editValue').value) || null
+      };
+      await updateLead(currentLead.id, updates);
+      closeLeadModal();
+    }
+
+    async function saveNote() {
+      const content = document.getElementById('newNote').value.trim();
+      if (!content) return;
+      if (await addNote(currentLead.id, content)) {
+        document.getElementById('newNote').value = '';
+        showTab('notes');
+      }
+    }
+
+    // ========== ESTIMATES ==========
+    let estimateItems = [];
+    
+    async function loadEstimate(leadId) {
+      const { data } = await supabaseClient.from('estimates').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(1);
+      return data && data.length > 0 ? data[0] : null;
+    }
+    
+    function renderNewEstimateForm() {
+      estimateItems = [{ description: '', quantity: 1, price: 0 }];
+      return `
+        <div class="mb-4">
+          <h4 class="font-semibold text-stone-700 mb-2">Customer Info</h4>
+          <div class="grid grid-cols-2 gap-3 p-3 bg-stone-50 rounded-lg">
+            <div><span class="text-xs text-stone-500">Name:</span><br><span class="font-medium">${currentLead.name || 'N/A'}</span></div>
+            <div><span class="text-xs text-stone-500">Phone:</span><br><span class="font-medium">${currentLead.phone || 'N/A'}</span></div>
+            <div class="col-span-2"><span class="text-xs text-stone-500">Address:</span><br><span class="font-medium">${currentLead.address || ''} ${currentLead.city || ''} ${currentLead.zip || ''}</span></div>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-semibold text-stone-700">Line Items</h4>
+            <button onclick="addEstimateItem()" class="text-orange-500 text-sm font-semibold hover:text-orange-600">+ Add Item</button>
+          </div>
+          <div id="estimateItemsContainer">
+            ${renderEstimateItems()}
+          </div>
+        </div>
+        
+        <div class="border-t pt-4">
+          <div class="flex justify-between mb-2">
+            <span class="text-stone-600">Subtotal</span>
+            <span id="estSubtotal" class="font-semibold">$0.00</span>
+          </div>
+          <div class="flex justify-between mb-2">
+            <span class="text-stone-600">Tax (8%)</span>
+            <span id="estTax" class="font-semibold">$0.00</span>
+          </div>
+          <div class="flex justify-between text-lg">
+            <span class="font-bold text-stone-800">Total</span>
+            <span id="estTotal" class="font-bold text-green-600">$0.00</span>
+          </div>
+        </div>
+        
+        <div class="mt-4">
+          <label class="form-label">Notes (optional)</label>
+          <textarea id="estNotes" class="form-input" rows="2" placeholder="Any additional notes..."></textarea>
+        </div>
+      `;
+    }
+    
+    function renderEstimateItems() {
+      return estimateItems.map((item, i) => `
+        <div class="flex gap-2 mb-2 items-start">
+          <input type="text" placeholder="Description" class="form-input flex-1" value="${item.description}" onchange="updateEstimateItem(${i}, 'description', this.value)">
+          <input type="number" placeholder="Qty" class="form-input w-16 text-center" value="${item.quantity}" min="1" onchange="updateEstimateItem(${i}, 'quantity', this.value)">
+          <input type="number" placeholder="Price" class="form-input w-24" value="${item.price}" step="0.01" onchange="updateEstimateItem(${i}, 'price', this.value)">
+          <button onclick="removeEstimateItem(${i})" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg ${estimateItems.length === 1 ? 'opacity-30 pointer-events-none' : ''}">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+    
+    function addEstimateItem() {
+      estimateItems.push({ description: '', quantity: 1, price: 0 });
+      document.getElementById('estimateItemsContainer').innerHTML = renderEstimateItems();
+      lucide.createIcons();
+      calculateEstimate();
+    }
+    
+    function removeEstimateItem(index) {
+      if (estimateItems.length > 1) {
+        estimateItems.splice(index, 1);
+        document.getElementById('estimateItemsContainer').innerHTML = renderEstimateItems();
+        lucide.createIcons();
+        calculateEstimate();
+      }
+    }
+    
+    function updateEstimateItem(index, field, value) {
+      estimateItems[index][field] = field === 'description' ? value : parseFloat(value) || 0;
+      calculateEstimate();
+    }
+    
+    function calculateEstimate() {
+      const subtotal = estimateItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+      const tax = subtotal * 0.08;
+      const total = subtotal + tax;
+      document.getElementById('estSubtotal').textContent = '$' + subtotal.toFixed(2);
+      document.getElementById('estTax').textContent = '$' + tax.toFixed(2);
+      document.getElementById('estTotal').textContent = '$' + total.toFixed(2);
+    }
+    
+    async function saveEstimate() {
+      const subtotal = estimateItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+      if (subtotal === 0) return alert('Please add at least one item with a price');
+      
+      const tax = subtotal * 0.08;
+      const total = subtotal + tax;
+      const estNumber = 'EST-' + Date.now().toString().slice(-6);
+      
+      const estimate = {
+        lead_id: currentLead.id,
+        company_id: COMPANY_ID,
+        estimate_number: estNumber,
+        customer_name: currentLead.name,
+        customer_email: currentLead.email,
+        customer_phone: currentLead.phone,
+        customer_address: `${currentLead.address || ''} ${currentLead.city || ''} ${currentLead.zip || ''}`.trim(),
+        items: estimateItems.filter(i => i.description && i.price > 0),
+        subtotal,
+        tax_rate: 8,
+        tax_amount: tax,
+        total,
+        status: 'draft',
+        notes: document.getElementById('estNotes')?.value || '',
+        valid_until: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0]
+      };
+      
+      try {
+        const { error } = await supabaseClient.from('estimates').insert([estimate]);
+        if (error) throw error;
+        alert('✅ Estimate saved!');
+        showTab('estimate');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+    
+    function renderExistingEstimate(est) {
+      const items = est.items || [];
+      const statusColors = { draft: 'bg-stone-100 text-stone-600', sent: 'bg-blue-100 text-blue-600', accepted: 'bg-green-100 text-green-600', declined: 'bg-red-100 text-red-600' };
+      return `
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h4 class="font-bold text-lg text-stone-800">${est.estimate_number}</h4>
+            <p class="text-sm text-stone-500">Created ${new Date(est.created_at).toLocaleDateString()}</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColors[est.status] || statusColors.draft}">${est.status.toUpperCase()}</span>
+        </div>
+        
+        <div class="mb-4 p-3 bg-stone-50 rounded-lg">
+          <p class="font-medium">${est.customer_name}</p>
+          <p class="text-sm text-stone-500">${est.customer_address}</p>
+        </div>
+        
+        <div class="mb-4">
+          <h5 class="font-semibold text-stone-700 mb-2">Items</h5>
+          <div class="border rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-stone-50">
+                <tr>
+                  <th class="text-left p-2 font-semibold">Description</th>
+                  <th class="text-center p-2 font-semibold w-16">Qty</th>
+                  <th class="text-right p-2 font-semibold w-24">Price</th>
+                  <th class="text-right p-2 font-semibold w-24">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map(i => `
+                  <tr class="border-t">
+                    <td class="p-2">${i.description}</td>
+                    <td class="p-2 text-center">${i.quantity}</td>
+                    <td class="p-2 text-right">$${Number(i.price).toFixed(2)}</td>
+                    <td class="p-2 text-right">$${(i.quantity * i.price).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="border-t pt-3">
+          <div class="flex justify-between mb-1"><span class="text-stone-600">Subtotal</span><span>$${Number(est.subtotal).toFixed(2)}</span></div>
+          <div class="flex justify-between mb-1"><span class="text-stone-600">Tax (${est.tax_rate}%)</span><span>$${Number(est.tax_amount).toFixed(2)}</span></div>
+          <div class="flex justify-between text-lg font-bold"><span>Total</span><span class="text-green-600">$${Number(est.total).toFixed(2)}</span></div>
+        </div>
+        
+        ${est.status === 'draft' ? `
+          <div class="mt-4 flex gap-2">
+            <button onclick="updateEstimateStatus('${est.id}', 'sent')" class="btn btn-primary btn-sm flex-1"><i data-lucide="send" class="w-4 h-4"></i> Mark as Sent</button>
+          </div>
+        ` : est.status === 'sent' ? `
+          <div class="mt-4 flex gap-2">
+            <button onclick="updateEstimateStatus('${est.id}', 'accepted')" class="btn btn-success btn-sm flex-1"><i data-lucide="check" class="w-4 h-4"></i> Accepted</button>
+            <button onclick="updateEstimateStatus('${est.id}', 'declined')" class="btn btn-danger btn-sm flex-1"><i data-lucide="x" class="w-4 h-4"></i> Declined</button>
+          </div>
+        ` : ''}
+      `;
+    }
+    
+    async function updateEstimateStatus(id, status) {
+      try {
+        const updates = { status };
+        if (status === 'sent') updates.sent_at = new Date().toISOString();
+        if (status === 'accepted') updates.accepted_at = new Date().toISOString();
+        
+        const { error } = await supabaseClient.from('estimates').update(updates).eq('id', id);
+        if (error) throw error;
+        showTab('estimate');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // ========== INVOICES ==========
+    async function loadInvoice(leadId) {
+      const { data } = await supabaseClient.from('invoices').select('*').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(1);
+      return data && data.length > 0 ? data[0] : null;
+    }
+    
+    async function convertToInvoice(estimateId) {
+      try {
+        const { data: est } = await supabaseClient.from('estimates').select('*').eq('id', estimateId).single();
+        if (!est) throw new Error('Estimate not found');
+        
+        const invNumber = 'INV-' + Date.now().toString().slice(-6);
+        const invoice = {
+          lead_id: est.lead_id,
+          estimate_id: est.id,
+          company_id: COMPANY_ID,
+          invoice_number: invNumber,
+          customer_name: est.customer_name,
+          customer_email: est.customer_email,
+          customer_phone: est.customer_phone,
+          customer_address: est.customer_address,
+          items: est.items,
+          subtotal: est.subtotal,
+          tax_rate: est.tax_rate,
+          tax_amount: est.tax_amount,
+          total: est.total,
+          amount_due: est.total,
+          amount_paid: 0,
+          status: 'sent',
+          due_date: new Date(Date.now() + 14*24*60*60*1000).toISOString().split('T')[0],
+          notes: est.notes
+        };
+        
+        const { error } = await supabaseClient.from('invoices').insert([invoice]);
+        if (error) throw error;
+        
+        alert('✅ Invoice created!');
+        showTab('invoice');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+    
+    function renderExistingInvoice(inv) {
+      const items = inv.items || [];
+      const statusColors = { draft: 'bg-stone-100 text-stone-600', sent: 'bg-blue-100 text-blue-600', paid: 'bg-green-100 text-green-600', overdue: 'bg-red-100 text-red-600' };
+      return `
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h4 class="font-bold text-lg text-stone-800">${inv.invoice_number}</h4>
+            <p class="text-sm text-stone-500">Due ${new Date(inv.due_date).toLocaleDateString()}</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-bold ${statusColors[inv.status] || statusColors.sent}">${inv.status.toUpperCase()}</span>
+        </div>
+        
+        <div class="mb-4 p-3 bg-stone-50 rounded-lg">
+          <p class="font-medium">${inv.customer_name}</p>
+          <p class="text-sm text-stone-500">${inv.customer_address}</p>
+        </div>
+        
+        <div class="mb-4">
+          <div class="border rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-stone-50">
+                <tr>
+                  <th class="text-left p-2 font-semibold">Description</th>
+                  <th class="text-center p-2 font-semibold w-16">Qty</th>
+                  <th class="text-right p-2 font-semibold w-24">Price</th>
+                  <th class="text-right p-2 font-semibold w-24">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items.map(i => `
+                  <tr class="border-t">
+                    <td class="p-2">${i.description}</td>
+                    <td class="p-2 text-center">${i.quantity}</td>
+                    <td class="p-2 text-right">$${Number(i.price).toFixed(2)}</td>
+                    <td class="p-2 text-right">$${(i.quantity * i.price).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="border-t pt-3">
+          <div class="flex justify-between mb-1"><span class="text-stone-600">Subtotal</span><span>$${Number(inv.subtotal).toFixed(2)}</span></div>
+          <div class="flex justify-between mb-1"><span class="text-stone-600">Tax</span><span>$${Number(inv.tax_amount).toFixed(2)}</span></div>
+          <div class="flex justify-between mb-1"><span class="text-stone-600">Paid</span><span class="text-green-600">-$${Number(inv.amount_paid).toFixed(2)}</span></div>
+          <div class="flex justify-between text-lg font-bold"><span>Amount Due</span><span class="${inv.status === 'paid' ? 'text-green-600' : 'text-orange-600'}">$${Number(inv.amount_due).toFixed(2)}</span></div>
+        </div>
+        
+        ${inv.status === 'paid' ? `
+          <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+            <i data-lucide="check-circle" class="w-6 h-6 text-green-500 mx-auto mb-1"></i>
+            <p class="font-semibold text-green-700">Paid in Full</p>
+            <p class="text-sm text-green-600">${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString() : ''}</p>
+          </div>
+        ` : ''}
+      `;
+    }
+    
+    async function markInvoicePaid(id) {
+      try {
+        const { data: inv } = await supabaseClient.from('invoices').select('total').eq('id', id).single();
+        const { error } = await supabaseClient.from('invoices').update({
+          status: 'paid',
+          amount_paid: inv.total,
+          amount_due: 0,
+          paid_at: new Date().toISOString()
+        }).eq('id', id);
+        if (error) throw error;
+        
+        // Update lead status to won and set job value
+        await updateLead(currentLead.id, { status: 'won', job_value: inv.total });
+        
+        alert('✅ Invoice marked as paid!');
+        showTab('invoice');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+    
+    function printEstimate(id) {
+      alert('🖨️ Print functionality coming soon!\n\nFor now, use your browser\'s print (Ctrl+P) on this modal.');
+    }
+    
+    function printInvoice(id) {
+      alert('🖨️ Print functionality coming soon!\n\nFor now, use your browser\'s print (Ctrl+P) on this modal.');
+    }
+    
+    function toggleMobileMenu() {
+      document.getElementById('mobileMenu').classList.toggle('hidden');
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Top-Rated Junk Removal Pros | HomeService Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+    }
+    h1, h2, h3, .font-display { font-family: 'Nunito', sans-serif; }
+    
+    .hero {
+      background: linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(250,250,250,0.88) 100%),
+                  url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center;
+      min-height: 100vh;
+    }
+    .hero.hidden { display: none; }
+    
+    .quiz-container {
+      display: none;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+    }
+    .quiz-container.active { display: block; }
+    
+    .progress-bar {
+      height: 5px;
+      background: #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f97316, #fb923c);
+      transition: width 0.4s ease;
+    }
+    
+    .quiz-step {
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    .quiz-step.active { display: block; }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .option-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 20px 24px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .option-card:hover {
+      border-color: #fdba74;
+      background: #fff7ed;
+    }
+    .option-card.selected {
+      border-color: #f97316;
+      background: #fff7ed;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+    }
+    .option-icon {
+      width: 50px;
+      height: 50px;
+      background: #fff7ed;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .option-card.selected .option-icon {
+      background: #f97316;
+    }
+    .option-card.selected .option-icon svg {
+      color: white;
+    }
+    
+    .btn-hero {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      padding: 18px 36px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 6px 20px rgba(249, 115, 22, 0.3);
+      transition: all 0.2s;
+    }
+    .btn-hero:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+      transition: all 0.2s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-back {
+      background: transparent;
+      color: #64748b;
+      border: none;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 8px;
+    }
+    .btn-back:hover { 
+      color: #334155; 
+      background: #f1f5f9;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 16px 20px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+    
+    .nav-link {
+      color: #57534e;
+      font-weight: 600;
+      font-size: 15px;
+      text-decoration: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .nav-link:hover {
+      color: #f97316;
+      background: #fff7ed;
+    }
+    .nav-btn {
+      border: 2px solid #e7e5e4;
+      background: white;
+    }
+    .nav-btn:hover {
+      border-color: #f97316;
+    }
+    
+    .trust-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #57534e;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .trust-icon {
+      width: 36px;
+      height: 36px;
+      background: #fff7ed;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f97316;
+    }
+    
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      animation: popIn 0.5s ease;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN MODAL -->
+  <div id="loginModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeLoginModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-fadeIn">
+      <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+      
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="home" class="w-7 h-7 text-orange-500"></i>
+        </div>
+        <h2 class="font-display text-2xl font-bold text-stone-800">Pro Portal Login</h2>
+        <p class="text-stone-500 text-sm mt-1">Access your leads, CRM, and calendar</p>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+          <input type="email" id="loginEmail" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition" placeholder="you@company.com">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+          <input type="password" id="loginPassword" class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition" placeholder="••••••••">
+        </div>
+        
+        <button onclick="handleLogin()" id="loginBtn" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 px-6 rounded-xl hover:from-orange-600 hover:to-orange-700 transition flex items-center justify-center gap-2">
+          <i data-lucide="log-in" class="w-5 h-5"></i>
+          Sign In
+        </button>
+        
+        <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center gap-2 text-gray-600 cursor-pointer">
+            <input type="checkbox" class="rounded border-gray-300">
+            Remember me
+          </label>
+          <a href="#" class="text-orange-500 hover:text-orange-600 font-medium">Forgot password?</a>
+        </div>
+      </div>
+      
+      <div class="mt-6 pt-6 border-t border-gray-100 text-center">
+        <p class="text-gray-500 text-sm">Don't have an account?</p>
+        <a href="pro-join.html" onclick="window.location.href='pro-join.html'; return true;" class="text-orange-500 hover:text-orange-600 font-semibold">Apply to join →</a>
+      </div>
+    </div>
+  </div>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+    #loginModal.hidden { display: none; }
+  </style>
+
+  <!-- ==================== LANDING PAGE ==================== -->
+  <div class="hero" id="heroSection">
+    
+    <!-- Navigation -->
+    <nav class="flex justify-between items-center px-4 md:px-12 py-4">
+      <a href="intake.html" class="flex items-center gap-2">
+        <div class="w-10 h-10 bg-orange-50 border border-orange-100 rounded-xl flex items-center justify-center">
+          <i data-lucide="home" class="w-5 h-5 text-orange-500"></i>
+        </div>
+        <span class="font-display font-extrabold text-lg md:text-xl text-stone-800 hidden sm:inline">HomeService Hub</span>
+      </a>
+      
+      <!-- Always visible nav buttons -->
+      <div class="flex items-center gap-2">
+        <a href="pro-join.html" class="flex items-center gap-1 px-3 py-2 text-stone-600 hover:text-orange-500 font-semibold text-sm md:text-base rounded-lg hover:bg-orange-50 transition">
+          <i data-lucide="briefcase" class="w-4 h-4"></i>
+          <span>Join as Pro</span>
+        </a>
+        <a href="login.html" class="flex items-center gap-1 px-3 py-2 bg-orange-500 text-white font-semibold text-sm md:text-base rounded-lg hover:bg-orange-600 transition">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>Pro Login</span>
+        </a>
+      </div>
+    </nav>
+    
+    <!-- Hero Content -->
+    <div class="flex flex-col items-center justify-center text-center px-6 pt-12 md:pt-20 pb-16">
+      
+      <div class="inline-flex items-center gap-2 bg-orange-50 border border-orange-100 px-4 py-2 rounded-full mb-6">
+        <i data-lucide="star" class="w-4 h-4 text-orange-500"></i>
+        <span class="text-stone-700 font-semibold text-sm">Trusted by 10,000+ Homeowners</span>
+      </div>
+      
+      <h1 class="font-display text-4xl md:text-5xl lg:text-6xl font-black text-stone-800 leading-tight max-w-3xl mb-5">
+        Get Junk Removed<br>
+        <span class="text-orange-500">Fast & Hassle-Free</span>
+      </h1>
+      
+      <p class="text-stone-500 text-lg md:text-xl max-w-xl mb-8">
+        Connect with top-rated local pros. Get free quotes and book same-day service.
+      </p>
+      
+      <button onclick="startQuiz()" class="btn-hero">
+        <i data-lucide="sparkles" class="w-5 h-5"></i>
+        Get Free Quotes
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </button>
+      
+      <p class="text-stone-400 text-sm mt-4">Takes less than 2 minutes • 100% Free</p>
+      
+      <!-- Trust Badges -->
+      <div class="flex flex-wrap justify-center gap-6 mt-12">
+        <div class="trust-badge">
+          <div class="trust-icon"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+          <span>Licensed & Insured</span>
+        </div>
+        <div class="trust-badge">
+          <div class="trust-icon"><i data-lucide="clock" class="w-4 h-4"></i></div>
+          <span>Same Day Service</span>
+        </div>
+        <div class="trust-badge">
+          <div class="trust-icon"><i data-lucide="badge-check" class="w-4 h-4"></i></div>
+          <span>Verified Reviews</span>
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- Footer -->
+    <div class="text-center pb-8">
+      <p class="text-stone-400 text-sm mb-2">Are you a service professional?</p>
+      <a href="pro-join.html" onclick="window.location.href='pro-join.html'; return true;" class="text-orange-500 font-semibold hover:text-orange-600 transition">
+        Join our network →
+      </a>
+    </div>
+    
+  </div>
+
+  <!-- ==================== QUIZ FUNNEL ==================== -->
+  <div class="quiz-container" id="quizContainer">
+    
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    
+    <!-- Quiz Header -->
+    <div class="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
+      <div class="max-w-xl mx-auto flex items-center justify-between">
+        <button onclick="goBack()" class="btn-back" id="backBtn" style="visibility: hidden;">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i> Back
+        </button>
+        <span class="text-sm text-gray-500 font-medium">Step <span id="stepNum">1</span> of 5</span>
+        <button onclick="exitQuiz()" class="btn-back">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Quiz Content -->
+    <div class="max-w-xl mx-auto px-6 py-10">
+      
+      <!-- Step 1: Service -->
+      <div class="quiz-step active" data-step="1">
+        <div class="text-center mb-8">
+          <h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">What do you need removed?</h2>
+          <p class="text-gray-500">Select the option that best describes your project</p>
+        </div>
+        
+        <div class="space-y-3" id="step1Options">
+          <div class="option-card" onclick="selectAndNext(this, 'service', 'General Junk')">
+            <div class="option-icon"><i data-lucide="trash-2" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">General Junk</div>
+              <div class="text-gray-500 text-sm">Household items, boxes, misc clutter</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'service', 'Furniture')">
+            <div class="option-icon"><i data-lucide="sofa" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Furniture</div>
+              <div class="text-gray-500 text-sm">Couches, beds, tables, chairs</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'service', 'Appliances')">
+            <div class="option-icon"><i data-lucide="refrigerator" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Appliances</div>
+              <div class="text-gray-500 text-sm">Fridges, washers, dryers, AC units</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'service', 'Yard Debris')">
+            <div class="option-icon"><i data-lucide="trees" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Yard Debris</div>
+              <div class="text-gray-500 text-sm">Branches, leaves, landscaping waste</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'service', 'Full Cleanout')">
+            <div class="option-icon"><i data-lucide="home" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Full Property Cleanout</div>
+              <div class="text-gray-500 text-sm">Estate, garage, basement, whole house</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'service', 'Construction')">
+            <div class="option-icon"><i data-lucide="hard-hat" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Construction Debris</div>
+              <div class="text-gray-500 text-sm">Renovation waste, drywall, lumber</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 2: Amount -->
+      <div class="quiz-step" data-step="2">
+        <div class="text-center mb-8">
+          <h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">How much needs to go?</h2>
+          <p class="text-gray-500">This helps us give you an accurate quote</p>
+        </div>
+        
+        <div class="space-y-3" id="step2Options">
+          <div class="option-card" onclick="selectAndNext(this, 'amount', 'Few items')">
+            <div class="option-icon"><i data-lucide="package" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Just a few items</div>
+              <div class="text-gray-500 text-sm">1-3 items or small pile</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'amount', 'Partial load')">
+            <div class="option-icon"><i data-lucide="truck" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Partial truck load</div>
+              <div class="text-gray-500 text-sm">Quarter to half a pickup truck</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'amount', 'Full load')">
+            <div class="option-icon"><i data-lucide="container" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Full truck load</div>
+              <div class="text-gray-500 text-sm">Full pickup or small trailer</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'amount', 'Multiple loads')">
+            <div class="option-icon"><i data-lucide="layers" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Multiple loads</div>
+              <div class="text-gray-500 text-sm">Large project, multiple trips</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 3: Timing -->
+      <div class="quiz-step" data-step="3">
+        <div class="text-center mb-8">
+          <h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">When do you need this done?</h2>
+          <p class="text-gray-500">We'll match you with available pros</p>
+        </div>
+        
+        <div class="space-y-3" id="step3Options">
+          <div class="option-card" onclick="selectAndNext(this, 'timing', 'today')">
+            <div class="option-icon"><i data-lucide="zap" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Today / ASAP</div>
+              <div class="text-gray-500 text-sm">Emergency or same-day service</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'timing', 'tomorrow')">
+            <div class="option-icon"><i data-lucide="sun" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">Within 1-2 days</div>
+              <div class="text-gray-500 text-sm">Soon but not urgent</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'timing', 'this_week')">
+            <div class="option-icon"><i data-lucide="calendar" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">This week</div>
+              <div class="text-gray-500 text-sm">Flexible within 7 days</div>
+            </div>
+          </div>
+          <div class="option-card" onclick="selectAndNext(this, 'timing', 'flexible')">
+            <div class="option-icon"><i data-lucide="clock" class="w-5 h-5 text-orange-500"></i></div>
+            <div>
+              <div class="font-semibold text-gray-900">I'm flexible</div>
+              <div class="text-gray-500 text-sm">No rush, just looking for quotes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 4: Location -->
+      <div class="quiz-step" data-step="4">
+        <div class="text-center mb-8">
+          <h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">Where is the pickup?</h2>
+          <p class="text-gray-500">We'll find pros in your area</p>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Street Address</label>
+            <input type="text" id="inputAddress" class="form-input" placeholder="123 Main Street">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">City</label>
+              <input type="text" id="inputCity" class="form-input" placeholder="Greenville">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">ZIP</label>
+              <input type="text" id="inputZip" class="form-input" placeholder="29601" maxlength="5">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Details (optional)</label>
+            <textarea id="inputDetails" class="form-input" rows="2" placeholder="Any special instructions..."></textarea>
+          </div>
+        </div>
+        
+        <button onclick="goToStep5()" class="btn-primary w-full mt-6">
+          Continue <i data-lucide="arrow-right" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <!-- Step 5: Contact -->
+      <div class="quiz-step" data-step="5">
+        <div class="text-center mb-8">
+          <h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">Almost done!</h2>
+          <p class="text-gray-500">How can pros reach you?</p>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Your Name</label>
+            <input type="text" id="inputName" class="form-input" placeholder="John Smith">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
+            <input type="tel" id="inputPhone" class="form-input" placeholder="(555) 555-5555">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Email (optional)</label>
+            <input type="email" id="inputEmail" class="form-input" placeholder="john@email.com">
+          </div>
+        </div>
+        
+        <button onclick="submitQuiz()" class="btn-primary w-full mt-6" id="submitBtn">
+          <i data-lucide="check-circle" class="w-5 h-5"></i> Get My Free Quotes
+        </button>
+        
+        <p class="text-center text-gray-400 text-sm mt-4">
+          <i data-lucide="lock" class="w-4 h-4 inline"></i> Your info is secure
+        </p>
+      </div>
+      
+      <!-- Step 6: Success -->
+      <div class="quiz-step" data-step="6">
+        <div class="text-center py-6">
+          <div class="success-icon">
+            <i data-lucide="check" class="w-10 h-10 text-white"></i>
+          </div>
+          
+          <h2 class="font-display text-2xl md:text-3xl font-bold text-gray-900 mb-2">You're All Set!</h2>
+          <p class="text-gray-500 mb-6">Local pros are reviewing your request now</p>
+          
+          <div class="bg-green-50 border border-green-200 rounded-xl p-5 text-left max-w-sm mx-auto mb-6">
+            <h4 class="font-semibold text-green-800 mb-3">What happens next?</h4>
+            <ul class="space-y-2 text-green-700 text-sm">
+              <li>✓ Pros in your area notified</li>
+              <li>✓ Expect calls within 1-2 hours</li>
+              <li>✓ Compare quotes & pick your pro</li>
+            </ul>
+          </div>
+          
+          <p class="text-gray-400 text-sm">Reference: <span id="refId" class="font-mono">-</span></p>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <script>
+    // Config
+    const SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // State
+    let currentStep = 1;
+    let answers = { service: '', amount: '', timing: '', address: '', city: '', zip: '', details: '', name: '', phone: '', email: '' };
+    
+    // Init
+    document.addEventListener('DOMContentLoaded', function() {
+      lucide.createIcons();
+    });
+    
+    // ========== LOGIN MODAL ==========
+    function openLoginModal() {
+      document.getElementById('loginModal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      lucide.createIcons();
+    }
+    
+    function closeLoginModal() {
+      document.getElementById('loginModal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    
+    function handleLogin() {
+      var email = document.getElementById('loginEmail').value.trim();
+      var password = document.getElementById('loginPassword').value.trim();
+      
+      if (!email || !password) {
+        alert('Please enter email and password');
+        return;
+      }
+      
+      var btn = document.getElementById('loginBtn');
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Signing in...';
+      btn.disabled = true;
+      
+      // Check if it's admin login
+      if (email === 'admin@homeservicehub.com') {
+        window.location.href = 'admin.html';
+        return;
+      }
+      
+      // Check for pro account in Supabase
+      supabaseClient.from('companies').select('id, name, email').eq('email', email).single().then(function(result) {
+        if (result.data) {
+          // Found pro account - store company ID and redirect
+          localStorage.setItem('proCompanyId', result.data.id);
+          localStorage.setItem('proCompanyName', result.data.name);
+          window.location.href = 'pro-dashboard.html?company=' + result.data.id;
+        } else {
+          alert('Account not found. Please apply to join first.');
+          btn.innerHTML = '<i data-lucide="log-in" class="w-5 h-5"></i> Sign In';
+          btn.disabled = false;
+          lucide.createIcons();
+        }
+      });
+    }
+    
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeLoginModal();
+    });
+    
+    // Start quiz
+    function startQuiz() {
+      document.getElementById('heroSection').classList.add('hidden');
+      document.getElementById('quizContainer').classList.add('active');
+      updateProgress();
+      lucide.createIcons();
+    }
+    
+    // Exit quiz
+    function exitQuiz() {
+      document.getElementById('heroSection').classList.remove('hidden');
+      document.getElementById('quizContainer').classList.remove('active');
+      currentStep = 1;
+      showStep(1);
+    }
+    
+    // Select option and go to next step
+    function selectAndNext(card, key, value) {
+      // Save answer
+      answers[key] = value;
+      
+      // Visual selection
+      var parent = card.parentElement;
+      var cards = parent.querySelectorAll('.option-card');
+      for (var i = 0; i < cards.length; i++) {
+        cards[i].classList.remove('selected');
+      }
+      card.classList.add('selected');
+      
+      // Go to next step after short delay
+      setTimeout(function() {
+        currentStep++;
+        showStep(currentStep);
+        updateProgress();
+      }, 250);
+    }
+    
+    // Go to step 5 (from step 4 button)
+    function goToStep5() {
+      var address = document.getElementById('inputAddress').value.trim();
+      var city = document.getElementById('inputCity').value.trim();
+      var zip = document.getElementById('inputZip').value.trim();
+      
+      if (!address || !city || !zip) {
+        alert('Please fill in address, city, and ZIP');
+        return;
+      }
+      
+      answers.address = address;
+      answers.city = city;
+      answers.zip = zip;
+      answers.details = document.getElementById('inputDetails').value.trim();
+      
+      currentStep = 5;
+      showStep(5);
+      updateProgress();
+    }
+    
+    // Go back
+    function goBack() {
+      if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+        updateProgress();
+      } else {
+        exitQuiz();
+      }
+    }
+    
+    // Show specific step
+    function showStep(step) {
+      var steps = document.querySelectorAll('.quiz-step');
+      for (var i = 0; i < steps.length; i++) {
+        steps[i].classList.remove('active');
+      }
+      var targetStep = document.querySelector('.quiz-step[data-step="' + step + '"]');
+      if (targetStep) {
+        targetStep.classList.add('active');
+      }
+      
+      document.getElementById('stepNum').textContent = Math.min(step, 5);
+      document.getElementById('backBtn').style.visibility = step > 1 ? 'visible' : 'hidden';
+      
+      lucide.createIcons();
+    }
+    
+    // Update progress bar
+    function updateProgress() {
+      var progress = ((currentStep - 1) / 5) * 100;
+      document.getElementById('progressFill').style.width = progress + '%';
+    }
+    
+    // Submit quiz
+    async function submitQuiz() {
+      var name = document.getElementById('inputName').value.trim();
+      var phone = document.getElementById('inputPhone').value.trim();
+      var email = document.getElementById('inputEmail').value.trim();
+      
+      if (!name || !phone) {
+        alert('Please enter name and phone');
+        return;
+      }
+      
+      answers.name = name;
+      answers.phone = phone;
+      answers.email = email;
+      
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = 'Submitting...';
+      
+      try {
+        // Tier based on timing
+        var tierMap = {
+          'today': { tier: 'SUPER', price: 112.50 },
+          'tomorrow': { tier: 'A', price: 45.00 },
+          'this_week': { tier: 'B', price: 33.75 },
+          'flexible': { tier: 'C', price: 22.50 }
+        };
+        var tierInfo = tierMap[answers.timing] || tierMap['this_week'];
+        
+        var jobTypeMap = {
+          'General Junk': 'General Junk Removal',
+          'Furniture': 'Furniture Disposal',
+          'Appliances': 'Appliance Removal',
+          'Yard Debris': 'Debris Removal',
+          'Full Cleanout': 'Estate Cleanout',
+          'Construction': 'Construction Debris'
+        };
+        var jobType = jobTypeMap[answers.service] || 'General Junk Removal';
+        
+        var serviceDetails = answers.service + ' - ' + answers.amount + '. ' + (answers.details || '');
+        
+        var result = await supabaseClient
+          .from('marketplace_leads')
+          .insert([{
+            name: answers.name,
+            phone: answers.phone,
+            email: answers.email || null,
+            address: answers.address,
+            city: answers.city,
+            state: 'SC',
+            zip: answers.zip,
+            service_details: serviceDetails.trim(),
+            urgency: answers.timing,
+            tier: tierInfo.tier,
+            job_type: jobType,
+            price: tierInfo.price,
+            available: true
+          }])
+          .select();
+        
+        if (result.error) throw result.error;
+        
+        document.getElementById('refId').textContent = result.data[0].id.slice(0, 8).toUpperCase();
+        currentStep = 6;
+        showStep(6);
+        document.querySelector('.progress-bar').style.display = 'none';
+        
+      } catch (err) {
+        alert('Error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Get My Free Quotes';
+        lucide.createIcons();
+      }
+    }
+    
+    // Mobile menu toggle
+    function toggleMobileMenu() {
+      var menu = document.getElementById('mobileMenu');
+      menu.classList.toggle('hidden');
+      lucide.createIcons();
+    }
+  </script>
+  
+  <!-- AI Chatbot Widget -->
+  <script src="chatbot.js"></script>
+</body>
+</html>
