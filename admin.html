@@ -1079,38 +1079,35 @@
     
     async function approveApplication(id) {
       if (!checkDemoMode('approve')) return;
-      const { data: app } = await supabaseClient.from('pro_applications').select('*').eq('id', id).single();
-      if (!app) return;
-      
-      // Create company from application
-      await supabaseClient.from('companies').insert({
-        name: app.business_name,
-        email: app.email,
-        phone: app.phone,
-        city: app.city,
-        state: app.state,
-        zip: app.zip_codes?.split(',')[0]?.trim(),
-        services: app.services,
-        service_radius: app.service_radius,
-        zip_codes: app.zip_codes
-      });
-      
-      // Update application status
-      await supabaseClient.from('pro_applications').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id);
 
-      // Email the applicant their approval
-      fetch('https://amggehmbxidqxzjimmzz.supabase.co/functions/v1/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'application_approved', data: {
-          email: app.email, business_name: app.business_name
-        }})
-      }).catch(() => {});
+      const btn = event?.target;
+      if (btn) { btn.disabled = true; btn.textContent = 'Approving...'; }
 
-      loadApplications();
-      loadPros();
-      loadDashboardData();
-      alert('Application approved! Pro account created and approval email sent.');
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) { alert('You must be logged in as admin.'); return; }
+
+        const res = await fetch('https://amggehmbxidqxzjimmzz.supabase.co/functions/v1/approve-application', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ application_id: id })
+        });
+
+        const result = await res.json();
+        if (!res.ok || result.error) throw new Error(result.error || 'Approval failed');
+
+        loadApplications();
+        loadPros();
+        loadDashboardData();
+        alert('✅ Application approved! Auth account created and password setup email sent to the pro.');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Approve'; }
+      }
     }
     
     async function rejectApplication(id) {
