@@ -314,7 +314,26 @@
         if (crmError) throw crmError;
         const { error: updateError } = await supabaseClient.from('marketplace_leads').update({ available: false }).eq('id', id);
         if (updateError) throw updateError;
-        alert('✅ Lead purchased! Added to your CRM.');
+
+        // Send lead details to company email
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          const { data: company } = await supabaseClient.from('companies').select('email').eq('id', companyId).single();
+          if (company?.email) {
+            fetch('https://amggehmbxidqxzjimmzz.supabase.co/functions/v1/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'lead_purchased', data: {
+                company_email: company.email, name: lead.name, phone: lead.phone,
+                email: lead.email, address: lead.address, city: lead.city,
+                state: lead.state, zip: lead.zip, job_type: lead.job_type,
+                service_details: lead.service_details, urgency: lead.urgency, tier: lead.tier
+              }})
+            }).catch(() => {});
+          }
+        }
+
+        alert('✅ Lead purchased! Check your email for full contact details.');
         closeModal();
         loadLeads();
       } catch (error) { alert('Error: ' + error.message); }

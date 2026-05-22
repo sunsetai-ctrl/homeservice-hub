@@ -1097,11 +1097,20 @@
       
       // Update application status
       await supabaseClient.from('pro_applications').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id);
-      
+
+      // Email the applicant their approval
+      fetch('https://amggehmbxidqxzjimmzz.supabase.co/functions/v1/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'application_approved', data: {
+          email: app.email, business_name: app.business_name
+        }})
+      }).catch(() => {});
+
       loadApplications();
       loadPros();
       loadDashboardData();
-      alert('Application approved! Pro account created.');
+      alert('Application approved! Pro account created and approval email sent.');
     }
     
     async function rejectApplication(id) {

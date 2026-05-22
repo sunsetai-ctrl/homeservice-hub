@@ -313,6 +313,13 @@
         
         if (userResult.error) throw userResult.error;
         
+        // Send welcome email
+        fetch('https://amggehmbxidqxzjimmzz.supabase.co/functions/v1/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'welcome', data: { email, name } })
+        }).catch(() => {});
+
         showMessage('Account created! Check your email to confirm, then login.', false);
         showLoginTab();
         

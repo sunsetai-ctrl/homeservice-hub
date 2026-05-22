@@ -467,6 +467,16 @@
           btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Submit Application';
           lucide.createIcons();
         } else {
+          // Notify admin of new application
+          fetch('https://amggehmbxidqxzjimmzz.supabase.co/functions/v1/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'new_application', data: {
+              business_name: business, contact_name: name, email: email,
+              phone: phone, city: answers.city, state: answers.state,
+              services: selectedServices
+            }})
+          }).catch(() => {});
           currentStep = 6;
           showStep(6);
           document.querySelector('.progress-bar').style.display = 'none';
