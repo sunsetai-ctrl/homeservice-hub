@@ -395,7 +395,6 @@
         await loadDashboardData();
         await loadLeads();
         await loadPipeline();
-        await loadMarketplace();
         await renderCalendar();
         initCharts();
         return;
@@ -436,7 +435,6 @@
       await loadDashboardData();
       await loadLeads();
       await loadPipeline();
-      await loadMarketplace();
       await renderCalendar();
       initCharts();
     });
@@ -473,7 +471,7 @@
     }
     
     async function loadCompanyInfo() {
-      const { data } = await supabaseClient.from('companies').select('*').eq('id', companyId).single();
+      const { data } = await supabaseClient.from('companies').select('*').eq('id', companyId).maybeSingle();
       if (data) {
         document.getElementById('companyName').textContent = data.name;
         document.getElementById('settingName').value = data.name || '';
