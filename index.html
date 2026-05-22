@@ -154,6 +154,17 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     let allLeads = [];
+
+    // Require login before showing leads
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) {
+        window.location.href = 'login.html';
+        return;
+      }
+      loadLeads();
+    });
+
     const tierStyles = {
       'SUPER': { badge: 'bg-green-500 text-white', glow: 'tier-super', icon: '🔥', bg: 'bg-gradient-to-br from-green-50 to-white border-l-4 border-l-green-500' },
       'A': { badge: 'bg-orange-500 text-white', glow: 'tier-a', icon: '⭐', bg: 'bg-gradient-to-br from-orange-50 to-white border-l-4 border-l-orange-500' },
@@ -304,7 +315,6 @@
 
     document.getElementById('buyModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
     function toggleMobileMenu() { document.getElementById('mobileMenu').classList.toggle('hidden'); }
-    loadLeads();
   </script>
 </body>
 </html>
