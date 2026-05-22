@@ -310,10 +310,14 @@
         if (!companyId) { window.location.href = 'login.html'; return; }
         const lead = allLeads.find(l => l.id === id);
         if (!lead) { alert('Lead not found'); return; }
-        const { error: crmError } = await supabaseClient.from('crm_leads').insert({ company_id: companyId, marketplace_lead_id: lead.id, name: lead.name, phone: lead.phone, email: lead.email, address: lead.address, city: lead.city, state: lead.state, zip: lead.zip, service_details: lead.service_details, job_type: lead.job_type, urgency: lead.urgency, tier: lead.tier, price_paid: lead.price, status: 'new' });
-        if (crmError) throw crmError;
-        const { error: updateError } = await supabaseClient.from('marketplace_leads').update({ available: false }).eq('id', id);
-        if (updateError) throw updateError;
+
+        // Atomic purchase — budget check + CRM insert + lead update in one transaction
+        const { data: result, error } = await supabaseClient.rpc('purchase_lead', {
+          p_company_id: companyId,
+          p_lead_id: id
+        });
+        if (error) throw error;
+        if (!result.success) { alert('❌ ' + result.error); return; }
 
         // Send lead details to company email
         const { data: { session } } = await supabaseClient.auth.getSession();

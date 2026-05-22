@@ -173,6 +173,13 @@
           <div class="stat-value" id="closeRate">0%</div>
           <div class="stat-label">Close Rate</div>
         </div>
+        <div class="stat-card">
+          <div class="flex justify-between items-start mb-2">
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center"><i data-lucide="wallet" class="w-6 h-6 text-green-600"></i></div>
+          </div>
+          <div class="stat-value">$<span id="remainingBudget">—</span></div>
+          <div class="stat-label">Remaining Budget</div>
+        </div>
       </div>
       
       <!-- Charts & Stats -->
@@ -450,6 +457,11 @@
         document.getElementById('settingEmail').value = data.email || '';
         document.getElementById('settingPhone').value = data.phone || '';
         document.getElementById('settingZips').value = data.zip_codes || '';
+
+        const budget = parseFloat(data.lead_budget) || 0;
+        const spent = parseFloat(data.total_spent) || 0;
+        const remaining = budget > 0 ? (budget - spent).toFixed(2) : '∞';
+        document.getElementById('remainingBudget').textContent = remaining;
       }
     }
     
