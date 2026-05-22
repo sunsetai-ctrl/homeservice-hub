@@ -442,7 +442,8 @@
     
     // Get company ID from URL params or use default
     const urlParams = new URLSearchParams(window.location.search);
-    const COMPANY_ID = urlParams.get('company') || '11111111-1111-1111-1111-111111111111';
+    const COMPANY_ID = urlParams.get('company');
+    if (!COMPANY_ID) { document.body.innerHTML = '<p style="font-family:sans-serif;padding:1rem;color:#dc2626;">Invalid booking link.</p>'; }
     
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     

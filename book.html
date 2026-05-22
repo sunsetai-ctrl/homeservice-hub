@@ -444,7 +444,8 @@
     // ========== CONFIG ==========
     const SUPABASE_URL = 'https://amggehmbxidqxzjimmzz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
-    const COMPANY_ID = '11111111-1111-1111-1111-111111111111';
+    const COMPANY_ID = new URLSearchParams(window.location.search).get('company');
+    if (!COMPANY_ID) { document.body.innerHTML = '<p style="font-family:sans-serif;padding:2rem;color:#dc2626;">Invalid booking link. Please contact the service provider.</p>'; }
     
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     

@@ -301,7 +301,8 @@
 
     async function buyLead(id) {
       try {
-        const companyId = localStorage.getItem('proCompanyId') || '11111111-1111-1111-1111-111111111111';
+        const companyId = localStorage.getItem('proCompanyId');
+        if (!companyId) { window.location.href = 'login.html'; return; }
         const lead = allLeads.find(l => l.id === id);
         if (!lead) { alert('Lead not found'); return; }
         const { error: crmError } = await supabaseClient.from('crm_leads').insert({ company_id: companyId, marketplace_lead_id: lead.id, name: lead.name, phone: lead.phone, email: lead.email, address: lead.address, city: lead.city, state: lead.state, zip: lead.zip, service_details: lead.service_details, job_type: lead.job_type, urgency: lead.urgency, tier: lead.tier, price_paid: lead.price, status: 'new' });

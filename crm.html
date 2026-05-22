@@ -367,7 +367,8 @@
     
     // Get company ID from URL param or localStorage
     const urlParams = new URLSearchParams(window.location.search);
-    const COMPANY_ID = urlParams.get('company') || localStorage.getItem('proCompanyId') || '11111111-1111-1111-1111-111111111111';
+    const COMPANY_ID = urlParams.get('company') || localStorage.getItem('proCompanyId');
+    if (!COMPANY_ID) { window.location.href = 'login.html'; }
     
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     

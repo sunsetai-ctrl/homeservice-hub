@@ -354,23 +354,6 @@
     document.addEventListener('DOMContentLoaded', async () => {
       lucide.createIcons();
       
-      // Check for demo mode first
-      const demoMode = localStorage.getItem('demoMode');
-      if (demoMode) {
-        // Demo mode - use hardcoded company
-        companyId = localStorage.getItem('proCompanyId') || '11111111-1111-1111-1111-111111111111';
-        document.getElementById('companyName').textContent = 'Demo Company';
-        
-        await loadCompanyInfo();
-        await loadDashboardData();
-        await loadLeads();
-        await loadPipeline();
-        await loadMarketplace();
-        await renderCalendar();
-        initCharts();
-        return;
-      }
-      
       // Check authentication
       const { data: { session } } = await supabaseClient.auth.getSession();
       
