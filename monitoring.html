@@ -248,7 +248,7 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZ2dlaG1ieGlkcXh6amltbXp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjUwODksImV4cCI6MjA4OTkwMTA4OX0.3vO8gqkb4m71tW0ZiXX_X9npzYUoFJ_2gT8sT1-B1rs';
     const EDGE_FUNCTION_URL = 'https://amggehmbxidqxzjimmzz.supabase.co/functions/v1/health-monitor';
     
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
@@ -266,7 +266,7 @@
     
     async function loadLatestHealth() {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('system_health_logs')
           .select('*')
           .order('checked_at', { ascending: false })
@@ -317,7 +317,7 @@
     }
     
     async function loadHistory() {
-      const { data } = await supabase
+      const { data } = await supabaseClient
         .from('system_health_logs')
         .select('*')
         .order('checked_at', { ascending: false })
@@ -380,7 +380,7 @@
     
     async function loadConfig() {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('monitoring_config')
           .select('*')
           .limit(1)
@@ -421,12 +421,12 @@
       };
       
       // Check if config exists
-      const { data: existing } = await supabase.from('monitoring_config').select('id').single();
-      
+      const { data: existing } = await supabaseClient.from('monitoring_config').select('id').single();
+
       if (existing) {
-        await supabase.from('monitoring_config').update(config).eq('id', existing.id);
+        await supabaseClient.from('monitoring_config').update(config).eq('id', existing.id);
       } else {
-        await supabase.from('monitoring_config').insert([config]);
+        await supabaseClient.from('monitoring_config').insert([config]);
       }
       
       closeConfigModal();
